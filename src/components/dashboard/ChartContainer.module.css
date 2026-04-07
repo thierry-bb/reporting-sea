@@ -1,0 +1,77 @@
+.container {
+  background: var(--color-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.titles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.subtitle {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.actions {
+  flex-shrink: 0;
+}
+
+/* Chart area */
+.chartArea {
+  position: relative;
+}
+
+/* Empty state */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  color: var(--color-text-subtle);
+  font-size: 13px;
+  padding: var(--space-10) 0;
+}
+
+.emptyIcon {
+  width: 40px;
+  height: 40px;
+  opacity: 0.3;
+}
+
+/* Skeleton */
+.skeletonChart {
+  width: 100%;
+  border-radius: var(--radius-md);
+  background: linear-gradient(90deg, var(--color-glass) 25%, var(--color-glass-hover) 50%, var(--color-glass) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

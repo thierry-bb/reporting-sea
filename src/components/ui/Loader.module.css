@@ -1,0 +1,60 @@
+/* Spinner */
+.spinner {
+  display: inline-block;
+  border-radius: 50%;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.15);
+  border-top-color: var(--color-accent);
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.spinner.sm  { width: 16px; height: 16px; border-width: 2px; }
+.spinner.md  { width: 24px; height: 24px; border-width: 3px; }
+.spinner.lg  { width: 40px; height: 40px; border-width: 4px; }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Spinner centered */
+.center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8);
+  width: 100%;
+}
+
+/* Skeleton */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-glass) 25%,
+    var(--color-glass-hover) 50%,
+    var(--color-glass) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeletonText {
+  height: 14px;
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-xs);
+}
+
+.skeletonText.wide   { width: 80%; }
+.skeletonText.medium { width: 55%; }
+.skeletonText.narrow { width: 30%; }
+
+.skeletonBlock {
+  width: 100%;
+  border-radius: var(--radius-md);
+}

@@ -1,0 +1,179 @@
+.card {
+  background: var(--color-glass, #2b2c2d);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5) var(--space-6);
+  position: relative;
+  overflow: hidden;
+  transition: all var(--transition-base);
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.card:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-glass-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Accent line top */
+.accentLine {
+  position: absolute;
+  top: 0;
+  left: var(--space-6);
+  right: var(--space-6);
+  height: 2px;
+  border-radius: 0 0 var(--radius-xs) var(--radius-xs);
+}
+
+.accentLine.accent    { background: var(--color-accent); }
+.accentLine.positive  { background: var(--color-positive); }
+.accentLine.info      { background: var(--color-info); }
+.accentLine.warning   { background: var(--color-warning); }
+.accentLine.danger    { background: var(--color-danger); }
+.accentLine.neutral   { background: var(--color-border-strong); }
+.accentLine.linkedin  { background: #22c55e; }
+
+/* Header row */
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-muted, #cccccc);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+
+.iconWrapper {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.iconWrapper.accent    { background: var(--color-accent-muted); color: var(--color-accent); }
+.iconWrapper.positive  { background: var(--color-positive-muted); color: var(--color-positive); }
+.iconWrapper.info      { background: var(--color-info-muted); color: var(--color-info); }
+.iconWrapper.warning   { background: var(--color-warning-muted); color: var(--color-warning); }
+.iconWrapper.danger    { background: var(--color-danger-muted); color: var(--color-danger); }
+.iconWrapper.neutral   { background: var(--color-glass-hover); color: var(--color-text-muted); }
+.iconWrapper.linkedin  { background: rgba(34, 197, 94, 0.12); color: #22c55e; }
+
+.iconWrapper svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Value */
+.value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+/* Delta */
+.footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: auto;
+}
+
+.delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: var(--radius-xl);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.delta.up {
+  background: var(--color-positive-muted);
+  color: var(--color-positive);
+}
+
+.delta.down {
+  background: var(--color-danger-muted);
+  color: var(--color-danger);
+}
+
+.delta.neutral {
+  background: var(--color-glass);
+  color: var(--color-text-muted);
+}
+
+/* Inverted (CPA: down = good) */
+.delta.up.inverted {
+  background: var(--color-danger-muted);
+  color: var(--color-danger);
+}
+
+.delta.down.inverted {
+  background: var(--color-positive-muted);
+  color: var(--color-positive);
+}
+
+.deltaArrow {
+  width: 10px;
+  height: 10px;
+}
+
+.deltaLabel {
+  font-size: 11px;
+  color: var(--color-text-subtle);
+}
+
+/* Skeleton */
+.skeletonValue {
+  height: 32px;
+  width: 60%;
+  border-radius: var(--radius-xs);
+  background: linear-gradient(90deg, var(--color-glass) 25%, var(--color-glass-hover) 50%, var(--color-glass) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.skeletonDelta {
+  height: 18px;
+  width: 80px;
+  border-radius: var(--radius-xl);
+  background: linear-gradient(90deg, var(--color-glass) 25%, var(--color-glass-hover) 50%, var(--color-glass) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media print {
+  .label {
+    color: rgba(255, 255, 255, 0.75) !important;
+  }
+  .deltaLabel {
+    color: rgba(255, 255, 255, 0.60) !important;
+  }
+  .value {
+    color: #ffffff !important;
+  }
+}

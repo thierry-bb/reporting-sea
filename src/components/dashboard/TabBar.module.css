@@ -1,0 +1,71 @@
+.tabBar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--color-glass);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 4px;
+}
+
+.tab {
+  padding: 6px 16px;
+  border-radius: calc(var(--radius-lg) - 2px);
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  font-family: var(--font-sans);
+}
+
+.tab:hover {
+  background: var(--color-glass-hover);
+  color: var(--color-text);
+}
+
+.tab.active {
+  background: var(--color-surface-solid);
+  color: var(--color-text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Couleurs par plateforme */
+.tab.blue {
+  border: 1px solid transparent;
+}
+.tab.blue:hover,
+.tab.blue.active {
+  border-color: var(--color-info);
+  color: var(--color-info);
+}
+
+.tab.pink {
+  border: 1px solid transparent;
+}
+.tab.pink:hover,
+.tab.pink.active {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.tab.yellow {
+  border: 1px solid transparent;
+}
+.tab.yellow:hover,
+.tab.yellow.active {
+  border-color: var(--color-positive);
+  color: var(--color-positive);
+}
+
+.tab.green {
+  border: 1px solid transparent;
+}
+.tab.green:hover,
+.tab.green.active {
+  border-color: #22c55e;
+  color: #22c55e;
+}

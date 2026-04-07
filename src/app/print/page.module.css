@@ -1,0 +1,275 @@
+.page {
+  background: #ffffff;
+  color: #1a1a1a;
+  font-family: var(--font-sans);
+  padding: 32px 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  /* Couleurs opaques pour rendu PDF Chrome (rgba = invisible sur couches backdrop-filter) */
+  --color-text-muted:  #cccccc;
+  --color-text-subtle: #aaaaaa;
+  --color-glass:       #2b2c2d;
+  --color-glass-hover: #383838;
+  --color-border:      #404040;
+  --color-surface:     #2b2c2d;
+}
+
+/* ── Overrides PDF — ciblage par data-attribute, scoped à .page ── */
+/* Plus fiable que les CSS variables en rendu Chrome PDF */
+/* Contrecarrer [class*="header"] { display:none } de globals.css @media print
+   qui cache aussi les .header internes aux composants (KpiCard, DataTable) */
+.page :global([class*="header"]),
+.page :global([class*="Header"]) {
+  display: flex !important;
+}
+
+.page :global([data-print-label]) {
+  color: #aaaaaa;
+}
+
+.page :global([data-print-title]) {
+  color: #ffffff;
+}
+
+.page :global([data-print-th]) {
+  color: #ffffff;
+  background: #1f2022;
+}
+
+/* Bouton retour — visible uniquement à l'écran */
+.closeBtn {
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.closeBtn a {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s;
+}
+
+.closeBtn a:hover {
+  color: var(--color-text);
+}
+
+/* ── Cover ── */
+.cover {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 40px 48px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  min-height: 160px;
+}
+
+.coverLogo {
+  max-height: 80px;
+  max-width: 280px;
+  object-fit: contain;
+}
+
+.coverClient {
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.coverRight {
+  text-align: right;
+}
+
+.coverLabel {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  margin: 0 0 8px;
+}
+
+.coverPeriod {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 0 6px;
+}
+
+.coverAgency {
+  font-size: 13px;
+  color: #ffffff;
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.coverAgencyLogo {
+  height: 20px;
+  width: auto;
+  object-fit: contain;
+}
+
+/* ── Sections ── */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.sectionTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* ── KPI Grids ── */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+.kpiGrid5 {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-4);
+}
+
+/* ── Two columns ── */
+.twoCol {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+/* ── Targets ── */
+.targets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.targetItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.targetHeader {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.progressBar {
+  height: 8px;
+  background: var(--color-glass);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* ── Analysis ── */
+.analysisCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.analysisSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.analysisBadge {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-accent);
+}
+
+.analysisHeadline {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.analysisKeyMessage {
+  font-size: 13px;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.analysisSummary {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── Print ── */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm 10mm;
+  }
+
+  .page {
+    padding: 0;
+    max-width: 100%;
+    gap: 0;
+  }
+
+  .closeBtn {
+    display: none !important;
+  }
+
+  .cover {
+    break-after: page;
+    margin-bottom: 0;
+  }
+
+  .section {
+    break-before: page;
+    gap: 12pt;
+  }
+
+  .kpiGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .kpiGrid5 {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .twoCol {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .section > * {
+    break-inside: avoid;
+  }
+}

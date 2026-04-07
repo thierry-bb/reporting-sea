@@ -1,0 +1,68 @@
+.platformGroups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.platformLabel {
+  display: flex;
+  align-items: center;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 14px;
+  border-radius: var(--radius-xl);
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid;
+}
+
+.facebook {
+  color: #4f8ef7;
+  border-color: rgba(79, 142, 247, 0.35);
+  background: rgba(79, 142, 247, 0.08);
+}
+
+.instagram {
+  color: #e1306c;
+  border-color: rgba(225, 48, 108, 0.35);
+  background: rgba(225, 48, 108, 0.08);
+}
+
+.messenger {
+  color: #00b2ff;
+  border-color: rgba(0, 178, 255, 0.35);
+  background: rgba(0, 178, 255, 0.08);
+}
+
+.audience_network {
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+  background: var(--color-glass);
+}
+
+.kpiRow {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--space-4);
+}
+
+@media (max-width: 1200px) {
+  .kpiRow {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .kpiRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
