@@ -5,8 +5,8 @@ import { createSupabaseServerClient } from '@/lib/supabase-server';
 import {
   formatCurrency, formatPercent, formatNumber, formatMonth,
   normalizeMonth, getMonthOffset, getPreviousMonth,
-  calcDelta, calcCPA, calcCTR,
-  aggregateGoogleStats, aggregateMetaStats,
+  calcDelta,
+  aggregateGoogleStats,
 } from '@/lib/formatters';
 import KpiCard from '@/components/dashboard/KpiCard';
 import ChartContainer from '@/components/dashboard/ChartContainer';
@@ -123,8 +123,8 @@ export default async function DashboardPage({ searchParams }) {
     { data: ga4Current },
     { data: ga4Prev },
     { data: googleStats },
+    { data: googleStatsPrev },
     { data: metaCampaigns },
-    { data: metaPurchases },
     { data: gscQueries },
     { data: trafficSources },
     { data: topPages },
@@ -142,8 +142,8 @@ export default async function DashboardPage({ searchParams }) {
     supabase.from(`${tablePrefix}ga4_overview`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
     supabase.from(`${tablePrefix}ga4_overview`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle(),
     supabase.from(`${tablePrefix}google_ads_monthly_stats`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
+    supabase.from(`${tablePrefix}google_ads_monthly_stats`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth),
     supabase.from(`${tablePrefix}meta_campaigns`).select('platform, impressions, reach, clicks, page_likes, spend, purchase_value').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
-    supabase.from(`${tablePrefix}meta_actions`).select('action_value').eq('client_id', currentClient.id).eq('report_month', selectedMonth).eq('action_type', 'purchase'),
     supabase.from(`${tablePrefix}gsc_top_queries`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('rank').limit(20),
     supabase.from(`${tablePrefix}ga4_traffic_sources`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
     supabase.from(`${tablePrefix}ga4_top_pages`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('rank').limit(10),
@@ -163,9 +163,12 @@ export default async function DashboardPage({ searchParams }) {
 
   // --- Calculs agrégés ---
   const googleAgg = aggregateGoogleStats(googleStats || []);
-  const metaAgg = aggregateMetaStats(metaCampaigns || []);
-  const purchases = (metaPurchases || []).reduce((s, a) => s + (parseFloat(a.action_value) || 0), 0);
-
+  const googleAggPrev = aggregateGoogleStats(googleStatsPrev || []);
+  const googleCtrDelta = calcDelta(googleAgg.ctr, googleAggPrev.ctr);
+  const googleClicksDelta = calcDelta(googleAgg.clicks, googleAggPrev.clicks);
+  const googleImpressionsDelta = calcDelta(googleAgg.impressions, googleAggPrev.impressions);
+  const googleConversionsDelta = calcDelta(googleAgg.conversions, googleAggPrev.conversions);
+  const googleCpaDelta = calcDelta(googleAgg.cpa, googleAggPrev.cpa);
   // Deltas globaux
   const spendDelta = calcDelta(globalCurrent?.total_ads_spend, globalPrev?.total_ads_spend);
   const googleDelta = calcDelta(globalCurrent?.google_spend, globalPrev?.google_spend);
@@ -175,12 +178,6 @@ export default async function DashboardPage({ searchParams }) {
 
   // Mois disponibles pour le sélecteur
   const availableMonths = (monthsList || []).map((r) => r.report_month);
-
-  // Targets
-  const googleTargetCPA = currentClient.target_cpa_google;
-  const googleMaxCPA = currentClient.max_cpa_google;
-  const metaTargetCPA = currentClient.target_cpa_meta;
-  const metaMaxCPA = currentClient.max_cpa_meta;
 
   return (
     <>
@@ -260,10 +257,11 @@ export default async function DashboardPage({ searchParams }) {
           <>
             <section className={styles.kpiGrid5}>
               <KpiCard label="Spend Google" value={formatCurrency(globalCurrent?.google_spend)} delta={googleDelta} color="info" />
-              <KpiCard label="Clics" value={formatNumber(googleAgg.clicks)} color="info" />
-              <KpiCard label="Impressions" value={formatNumber(googleAgg.impressions)} color="info" />
-              <KpiCard label="Conversions" value={formatNumber(googleAgg.conversions)} color="info" />
-              <KpiCard label="Coût / conv." value={formatCurrency(googleAgg.cpa)} color="info" />
+              <KpiCard label="CTR" value={googleAgg.ctr > 0 ? `${googleAgg.ctr.toFixed(2)}%` : '—'} delta={googleCtrDelta} color="info" />
+              <KpiCard label="Clics" value={formatNumber(googleAgg.clicks)} delta={googleClicksDelta} color="info" />
+              <KpiCard label="Impressions" value={formatNumber(googleAgg.impressions)} delta={googleImpressionsDelta} color="info" />
+              <KpiCard label="Conversions" value={formatNumber(googleAgg.conversions)} delta={googleConversionsDelta} color="info" />
+              <KpiCard label="Coût / conv." value={formatCurrency(googleAgg.cpa)} delta={googleCpaDelta} color="info" invertDelta />
             </section>
             <GoogleCampaignsTable rows={googleStats || []} />
             <GoogleConversionsTable rows={googleConversions || []} />
@@ -367,40 +365,6 @@ function AnalysisBlock({ analyses }) {
           </div>
         );
       })}
-    </div>
-  );
-}
-
-function TargetProgress({ label, actual, target, max, formatFn, invertGood = false }) {
-  const ratio = target > 0 ? (actual / target) * 100 : 0;
-  const cappedRatio = Math.min(ratio, 100);
-
-  let status = 'good';
-  if (invertGood) {
-    if (ratio > 100 && max && actual > max) status = 'danger';
-    else if (ratio > 100) status = 'warning';
-    else status = 'good';
-  } else {
-    if (ratio < 70) status = 'danger';
-    else if (ratio < 90) status = 'warning';
-    else status = 'good';
-  }
-
-  return (
-    <div className={styles.targetItem}>
-      <div className={styles.targetHeader}>
-        <span className={styles.targetLabel}>{label}</span>
-        <div className={styles.targetValues}>
-          <span className={styles.targetActual}>{formatFn(actual)}</span>
-          <span className={styles.targetGoal}>/ {formatFn(target)} cible</span>
-        </div>
-      </div>
-      <div className={styles.progressBar}>
-        <div
-          className={`${styles.progressFill} ${styles[status]}`}
-          style={{ width: `${cappedRatio}%` }}
-        />
-      </div>
     </div>
   );
 }

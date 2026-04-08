@@ -107,8 +107,8 @@
 }
 
 .delta.up {
-  background: var(--color-positive-muted);
-  color: var(--color-positive);
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
 }
 
 .delta.down {
@@ -128,8 +128,8 @@
 }
 
 .delta.down.inverted {
-  background: var(--color-positive-muted);
-  color: var(--color-positive);
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
 }
 
 .deltaArrow {
@@ -139,7 +139,7 @@
 
 .deltaLabel {
   font-size: 11px;
-  color: var(--color-text-subtle);
+  color: var(--color-text-muted);
 }
 
 /* Skeleton */
