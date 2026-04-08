@@ -23,6 +23,7 @@ import TopPagesTable from './TopPagesTable';
 import Ga4EventsTable from './Ga4EventsTable';
 import GscQueriesTable from './GscQueriesTable';
 import LinkedInCampaignsTable from './LinkedInCampaignsTable';
+import LinkedInEventsTable from './LinkedInEventsTable';
 import PrintButton from '@/components/dashboard/PrintButton';
 import styles from './page.module.css';
 
@@ -141,6 +142,7 @@ export default async function DashboardPage({ searchParams }) {
     { data: ga4Events },
     { data: metaCampaignsPrev },
     { data: linkedInOverviewPrev },
+    { data: linkedInEvents },
   ] = await Promise.all([
     supabase.from(`${tablePrefix}global_monthly_reporting`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
     supabase.from(`${tablePrefix}global_monthly_reporting`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle(),
@@ -169,6 +171,9 @@ export default async function DashboardPage({ searchParams }) {
     hasLinkedIn
       ? supabase.from(`${tablePrefix}linkedin_ads_overview`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle()
       : Promise.resolve({ data: null }),
+    hasLinkedIn
+      ? supabase.from(`${tablePrefix}linkedin_ads_events`).select('conversion_name, conversions').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('conversions', { ascending: false })
+      : Promise.resolve({ data: [] }),
   ]);
 
   // --- Calculs agrégés ---
@@ -354,6 +359,7 @@ export default async function DashboardPage({ searchParams }) {
               <KpiCard label="ROAS"        value={linkedInOverview?.global_roas != null ? `×${Number(linkedInOverview.global_roas).toFixed(2)}` : '—'}               delta={liRoasDelta} color="linkedin" />
             </section>
             <LinkedInCampaignsTable rows={linkedInCampaigns || []} />
+            <LinkedInEventsTable rows={linkedInEvents || []} />
           </>
         )}
 
