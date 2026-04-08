@@ -20,6 +20,7 @@ import MetaCampaignsTable from './MetaCampaignsTable';
 import MetaInsightsCharts from './MetaInsightsCharts';
 import GoogleConversionsTable from './GoogleConversionsTable';
 import TopPagesTable from './TopPagesTable';
+import Ga4EventsTable from './Ga4EventsTable';
 import GscQueriesTable from './GscQueriesTable';
 import LinkedInCampaignsTable from './LinkedInCampaignsTable';
 import PrintButton from '@/components/dashboard/PrintButton';
@@ -137,6 +138,7 @@ export default async function DashboardPage({ searchParams }) {
     { data: metaInsights },
     { data: linkedInOverview },
     { data: linkedInCampaigns },
+    { data: ga4Events },
   ] = await Promise.all([
     supabase.from(`${tablePrefix}global_monthly_reporting`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
     supabase.from(`${tablePrefix}global_monthly_reporting`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle(),
@@ -160,6 +162,7 @@ export default async function DashboardPage({ searchParams }) {
     hasLinkedIn
       ? supabase.from(`${tablePrefix}linkedin_ads_campaigns`).select('campaign_name, campaign_id, status, objective, impressions, clicks, conversions, cost_chf, conv_value_chf').eq('client_id', currentClient.id).eq('report_month', selectedMonth)
       : Promise.resolve({ data: [] }),
+    supabase.from(`${tablePrefix}ga4_events_report`).select('event_name, event_count, total_users').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('event_count', { ascending: false }),
   ]);
 
   // --- Calculs agrégés ---
@@ -290,11 +293,12 @@ export default async function DashboardPage({ searchParams }) {
               <KpiCard label="Total utilisateurs" value={formatNumber(ga4Current?.total_users)} color="positive" />
             </section>
             <div className={styles.twoColEqual}>
-              <ChartContainer title="Sources de trafic" height={280}>
-                <TrafficSourceChart data={trafficSources || []} />
-              </ChartContainer>
               <TopPagesTable rows={topPages || []} />
+              <Ga4EventsTable rows={ga4Events || []} />
             </div>
+            <ChartContainer title="Sources de trafic" height={280}>
+              <TrafficSourceChart data={trafficSources || []} />
+            </ChartContainer>
           </>
         )}
 
