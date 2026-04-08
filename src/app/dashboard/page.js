@@ -255,7 +255,7 @@ export default async function DashboardPage({ searchParams }) {
         {/* ── GOOGLE ADS ── */}
         {activeTab === 'google' && (
           <>
-            <section className={styles.kpiGrid5}>
+            <section className={styles.kpiGrid6}>
               <KpiCard label="Spend Google" value={formatCurrency(globalCurrent?.google_spend)} delta={googleDelta} color="info" />
               <KpiCard label="CTR" value={googleAgg.ctr > 0 ? `${googleAgg.ctr.toFixed(2)}%` : '—'} delta={googleCtrDelta} color="info" />
               <KpiCard label="Clics" value={formatNumber(googleAgg.clicks)} delta={googleClicksDelta} color="info" />

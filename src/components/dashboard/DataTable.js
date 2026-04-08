@@ -18,6 +18,7 @@ export default function DataTable({
   rows = [],
   loading = false,
   emptyMessage = 'Aucune donnée',
+  maxHeight,
 }) {
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState('asc');
@@ -55,7 +56,7 @@ export default function DataTable({
         </div>
       )}
 
-      <div className={styles.tableWrapper}>
+      <div className={styles.tableWrapper} style={maxHeight ? { maxHeight, overflowY: 'auto' } : undefined}>
         <table className={styles.table}>
           <thead>
             <tr>

@@ -15,6 +15,7 @@ export default function MetaActionsTable({ rows }) {
       columns={COLUMNS}
       rows={rows}
       emptyMessage="Aucune action Meta ce mois"
+      maxHeight="480px"
     />
   );
 }
