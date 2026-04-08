@@ -97,6 +97,7 @@ function InsightPie({ title, data }) {
               endAngle={-270}
               label={renderLabel}
               labelLine={false}
+              stroke="none"
             >
               {chartData.map((entry, i) => (
                 <Cell

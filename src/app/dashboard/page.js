@@ -267,14 +267,6 @@ export default async function DashboardPage({ searchParams }) {
             </section>
             <GoogleCampaignsTable rows={googleStats || []} />
             <GoogleConversionsTable rows={googleConversions || []} />
-            {googleTargetCPA && googleAgg.cpa > 0 && (
-              <>
-                <h2 className={`${styles.sectionTitle} ${styles.targets}`}>Objectifs</h2>
-                <div className={styles.targetsGrid}>
-                  <TargetProgress label="CPA Google" actual={googleAgg.cpa} target={googleTargetCPA} max={googleMaxCPA} formatFn={formatCurrency} invertGood />
-                </div>
-              </>
-            )}
           </>
         )}
 
@@ -284,14 +276,6 @@ export default async function DashboardPage({ searchParams }) {
             <MetaPlatformTable rows={metaCampaigns || []} />
             <MetaInsightsCharts rows={metaInsights || []} />
             <MetaActionsTable rows={metaActions || []} />
-            {metaTargetCPA && metaAgg.spend > 0 && (
-              <>
-                <h2 className={`${styles.sectionTitle} ${styles.targets}`}>Objectifs</h2>
-                <div className={styles.targetsGrid}>
-                  <TargetProgress label="CPA Meta" actual={calcCPA(metaAgg.spend, purchases)} target={metaTargetCPA} max={metaMaxCPA} formatFn={formatCurrency} invertGood />
-                </div>
-              </>
-            )}
           </>
         )}
 

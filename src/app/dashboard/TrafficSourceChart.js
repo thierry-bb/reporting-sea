@@ -62,6 +62,7 @@ export default function TrafficSourceChart({ data }) {
           paddingAngle={3}
           label={renderLabel}
           labelLine={false}
+          stroke="none"
         >
           {sorted.map((entry, i) => (
             <Cell key={entry.source_medium} fill={PIE_COLORS[i % PIE_COLORS.length]} />
