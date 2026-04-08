@@ -133,8 +133,10 @@
 }
 
 .deltaArrow {
-  width: 10px;
-  height: 10px;
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
 }
 
 .deltaLabel {

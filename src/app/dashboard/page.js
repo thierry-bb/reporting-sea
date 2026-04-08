@@ -139,6 +139,8 @@ export default async function DashboardPage({ searchParams }) {
     { data: linkedInOverview },
     { data: linkedInCampaigns },
     { data: ga4Events },
+    { data: metaCampaignsPrev },
+    { data: linkedInOverviewPrev },
   ] = await Promise.all([
     supabase.from(`${tablePrefix}global_monthly_reporting`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
     supabase.from(`${tablePrefix}global_monthly_reporting`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle(),
@@ -163,6 +165,10 @@ export default async function DashboardPage({ searchParams }) {
       ? supabase.from(`${tablePrefix}linkedin_ads_campaigns`).select('campaign_name, campaign_id, status, objective, impressions, clicks, conversions, cost_chf, conv_value_chf').eq('client_id', currentClient.id).eq('report_month', selectedMonth)
       : Promise.resolve({ data: [] }),
     supabase.from(`${tablePrefix}ga4_events_report`).select('event_name, event_count, total_users').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('event_count', { ascending: false }),
+    supabase.from(`${tablePrefix}meta_campaigns`).select('impressions, reach, clicks, page_likes, spend, platform').eq('client_id', currentClient.id).eq('report_month', previousMonth),
+    hasLinkedIn
+      ? supabase.from(`${tablePrefix}linkedin_ads_overview`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
 
   // --- Calculs agrégés ---
@@ -178,7 +184,37 @@ export default async function DashboardPage({ searchParams }) {
   const googleDelta = calcDelta(globalCurrent?.google_spend, globalPrev?.google_spend);
   const metaDelta = calcDelta(globalCurrent?.meta_spend, globalPrev?.meta_spend);
   const sessionsDelta = calcDelta(ga4Current?.sessions, ga4Prev?.sessions);
+  const engagedSessionsDelta = calcDelta(ga4Current?.engaged_sessions, ga4Prev?.engaged_sessions);
+  const engagementRateDelta = calcDelta(ga4Current?.engagement_rate, ga4Prev?.engagement_rate);
+  const newUsersDelta = calcDelta(ga4Current?.new_users, ga4Prev?.new_users);
   const usersDelta = calcDelta(ga4Current?.total_users, ga4Prev?.total_users);
+
+  // Deltas Meta par plateforme
+  function aggMetaByPlatform(rows) {
+    const map = {};
+    for (const r of (rows || [])) {
+      const k = (r.platform || '').toLowerCase();
+      if (!map[k]) map[k] = { impressions: 0, reach: 0, clicks: 0, page_likes: 0, spend: 0 };
+      map[k].impressions += Number(r.impressions) || 0;
+      map[k].reach       += Number(r.reach)       || 0;
+      map[k].clicks      += Number(r.clicks)      || 0;
+      map[k].page_likes  += Number(r.page_likes)  || 0;
+      map[k].spend       += Number(r.spend)       || 0;
+    }
+    return map;
+  }
+  const metaAggCur  = aggMetaByPlatform(metaCampaigns);
+  const metaAggPrev = aggMetaByPlatform(metaCampaignsPrev);
+
+  // Deltas LinkedIn
+  const liImpressionsDelta  = calcDelta(linkedInOverview?.total_impressions,   linkedInOverviewPrev?.total_impressions);
+  const liClicksDelta        = calcDelta(linkedInOverview?.total_clicks,        linkedInOverviewPrev?.total_clicks);
+  const liConversionsDelta   = calcDelta(linkedInOverview?.total_conversions,   linkedInOverviewPrev?.total_conversions);
+  const liFollowsDelta       = calcDelta(linkedInOverview?.total_follows,       linkedInOverviewPrev?.total_follows);
+  const liCostDelta          = calcDelta(linkedInOverview?.total_cost_chf,      linkedInOverviewPrev?.total_cost_chf);
+  const liConvValueDelta     = calcDelta(linkedInOverview?.total_conv_value_chf,linkedInOverviewPrev?.total_conv_value_chf);
+  const liCtrDelta           = calcDelta(linkedInOverview?.global_ctr_percent,  linkedInOverviewPrev?.global_ctr_percent);
+  const liRoasDelta          = calcDelta(linkedInOverview?.global_roas,         linkedInOverviewPrev?.global_roas);
 
   // Mois disponibles pour le sélecteur
   const availableMonths = (monthsList || []).map((r) => r.report_month);
@@ -275,7 +311,7 @@ export default async function DashboardPage({ searchParams }) {
         {/* ── META ADS ── */}
         {activeTab === 'meta' && (
           <>
-            <MetaPlatformTable rows={metaCampaigns || []} />
+            <MetaPlatformTable rows={metaCampaigns || []} prevRows={metaCampaignsPrev || []} />
             <MetaCampaignsTable rows={metaCampaigns || []} />
             <MetaInsightsCharts rows={metaInsights || []} />
             <MetaActionsTable rows={metaActions || []} />
@@ -286,11 +322,11 @@ export default async function DashboardPage({ searchParams }) {
         {activeTab === 'ga4' && (
           <>
             <section className={styles.kpiGrid5}>
-              <KpiCard label="Sessions" value={formatNumber(ga4Current?.sessions)} delta={sessionsDelta} color="positive" />
-              <KpiCard label="Sessions engagées" value={formatNumber(ga4Current?.engaged_sessions)} color="positive" />
-              <KpiCard label="Taux d'engagement" value={ga4Current?.engagement_rate != null ? formatPercent(ga4Current.engagement_rate) : '—'} color="positive" />
-              <KpiCard label="Nouveaux utilisateurs" value={formatNumber(ga4Current?.new_users)} delta={usersDelta} color="positive" />
-              <KpiCard label="Total utilisateurs" value={formatNumber(ga4Current?.total_users)} color="positive" />
+              <KpiCard label="Sessions"             value={formatNumber(ga4Current?.sessions)}          delta={sessionsDelta}       color="positive" />
+              <KpiCard label="Sessions engagées"    value={formatNumber(ga4Current?.engaged_sessions)}  delta={engagedSessionsDelta} color="positive" />
+              <KpiCard label="Taux d'engagement"    value={ga4Current?.engagement_rate != null ? formatPercent(ga4Current.engagement_rate) : '—'} delta={engagementRateDelta} color="positive" />
+              <KpiCard label="Nouveaux utilisateurs" value={formatNumber(ga4Current?.new_users)}        delta={newUsersDelta}        color="positive" />
+              <KpiCard label="Total utilisateurs"   value={formatNumber(ga4Current?.total_users)}       delta={usersDelta}           color="positive" />
             </section>
             <div className={styles.twoColEqual}>
               <TopPagesTable rows={topPages || []} />
@@ -306,16 +342,16 @@ export default async function DashboardPage({ searchParams }) {
         {activeTab === 'linkedin' && (
           <>
             <section className={styles.kpiGrid}>
-              <KpiCard label="Impressions"  value={formatNumber(linkedInOverview?.total_impressions)}  color="linkedin" />
-              <KpiCard label="Clics"        value={formatNumber(linkedInOverview?.total_clicks)}       color="linkedin" />
-              <KpiCard label="Conversions"  value={formatNumber(linkedInOverview?.total_conversions)}  color="linkedin" />
-              <KpiCard label="Follows"      value={formatNumber(linkedInOverview?.total_follows)}      color="linkedin" />
+              <KpiCard label="Impressions" value={formatNumber(linkedInOverview?.total_impressions)}  delta={liImpressionsDelta}  color="linkedin" />
+              <KpiCard label="Clics"       value={formatNumber(linkedInOverview?.total_clicks)}       delta={liClicksDelta}        color="linkedin" />
+              <KpiCard label="Conversions" value={formatNumber(linkedInOverview?.total_conversions)}  delta={liConversionsDelta}   color="linkedin" />
+              <KpiCard label="Follows"     value={formatNumber(linkedInOverview?.total_follows)}      delta={liFollowsDelta}       color="linkedin" />
             </section>
             <section className={styles.kpiGrid}>
-              <KpiCard label="Coût total"   value={formatCurrency(linkedInOverview?.total_cost_chf)}      color="linkedin" />
-              <KpiCard label="Conv. Value"  value={formatCurrency(linkedInOverview?.total_conv_value_chf)} color="linkedin" />
-              <KpiCard label="CTR"          value={linkedInOverview?.global_ctr_percent != null ? `${Number(linkedInOverview.global_ctr_percent).toFixed(2)}%` : '—'} color="linkedin" />
-              <KpiCard label="ROAS"         value={linkedInOverview?.global_roas != null ? `×${Number(linkedInOverview.global_roas).toFixed(2)}` : '—'} color="linkedin" />
+              <KpiCard label="Coût total"  value={formatCurrency(linkedInOverview?.total_cost_chf)}       delta={liCostDelta}      color="linkedin" invertDelta />
+              <KpiCard label="Conv. Value" value={formatCurrency(linkedInOverview?.total_conv_value_chf)}  delta={liConvValueDelta} color="linkedin" />
+              <KpiCard label="CTR"         value={linkedInOverview?.global_ctr_percent != null ? `${Number(linkedInOverview.global_ctr_percent).toFixed(2)}%` : '—'} delta={liCtrDelta}  color="linkedin" />
+              <KpiCard label="ROAS"        value={linkedInOverview?.global_roas != null ? `×${Number(linkedInOverview.global_roas).toFixed(2)}` : '—'}               delta={liRoasDelta} color="linkedin" />
             </section>
             <LinkedInCampaignsTable rows={linkedInCampaigns || []} />
           </>
