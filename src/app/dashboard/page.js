@@ -143,6 +143,7 @@ export default async function DashboardPage({ searchParams }) {
     { data: metaCampaignsPrev },
     { data: linkedInOverviewPrev },
     { data: linkedInEvents },
+    { data: linkedInTrend },
   ] = await Promise.all([
     supabase.from(`${tablePrefix}global_monthly_reporting`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
     supabase.from(`${tablePrefix}global_monthly_reporting`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle(),
@@ -173,6 +174,9 @@ export default async function DashboardPage({ searchParams }) {
       : Promise.resolve({ data: null }),
     hasLinkedIn
       ? supabase.from(`${tablePrefix}linkedin_ads_events`).select('conversion_name, conversions').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('conversions', { ascending: false })
+      : Promise.resolve({ data: [] }),
+    hasLinkedIn
+      ? supabase.from(`${tablePrefix}linkedin_ads_overview`).select('report_month, total_cost_chf').eq('client_id', currentClient.id).gte('report_month', sixMonthsAgo).lte('report_month', selectedMonth).order('report_month')
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -210,6 +214,17 @@ export default async function DashboardPage({ searchParams }) {
   }
   const metaAggCur  = aggMetaByPlatform(metaCampaigns);
   const metaAggPrev = aggMetaByPlatform(metaCampaignsPrev);
+
+  // Fusionner LinkedIn spend dans trendData
+  const mergedTrend = (trendData || []).map((d) => {
+    const li = hasLinkedIn ? (linkedInTrend || []).find((r) => r.report_month === d.report_month) : null;
+    return { ...d, linkedin_spend: li?.total_cost_chf ?? null };
+  });
+
+  // Total Spend (inclut LinkedIn si applicable)
+  const totalSpend     = (globalCurrent?.total_ads_spend || 0) + (hasLinkedIn ? (linkedInOverview?.total_cost_chf || 0) : 0);
+  const totalSpendPrev = (globalPrev?.total_ads_spend    || 0) + (hasLinkedIn ? (linkedInOverviewPrev?.total_cost_chf || 0) : 0);
+  const totalSpendDelta = calcDelta(totalSpend || null, totalSpendPrev || null);
 
   // Deltas LinkedIn
   const liImpressionsDelta  = calcDelta(linkedInOverview?.total_impressions,   linkedInOverviewPrev?.total_impressions);
@@ -260,8 +275,8 @@ export default async function DashboardPage({ searchParams }) {
             <section className={styles.kpiGrid}>
               <KpiCard
                 label="Total Ads Spend"
-                value={formatCurrency(globalCurrent?.total_ads_spend)}
-                delta={spendDelta}
+                value={formatCurrency(hasLinkedIn ? totalSpend : globalCurrent?.total_ads_spend)}
+                delta={hasLinkedIn ? totalSpendDelta : spendDelta}
                 color="neutral"
                 icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>}
               />
@@ -279,18 +294,29 @@ export default async function DashboardPage({ searchParams }) {
                 color="accent"
                 icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>}
               />
-              <KpiCard
-                label="Sessions GA4"
-                value={formatNumber(ga4Current?.sessions)}
-                delta={sessionsDelta}
-                color="positive"
-                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>}
-              />
+              {hasLinkedIn ? (
+                <KpiCard
+                  label="LinkedIn Ads Spend"
+                  value={formatCurrency(linkedInOverview?.total_cost_chf)}
+                  delta={liCostDelta}
+                  color="linkedin"
+                  invertDelta
+                  icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>}
+                />
+              ) : (
+                <KpiCard
+                  label="Sessions GA4"
+                  value={formatNumber(ga4Current?.sessions)}
+                  delta={sessionsDelta}
+                  color="positive"
+                  icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>}
+                />
+              )}
             </section>
 
             <div className={styles.twoCol}>
               <ChartContainer title="Évolution du budget" subtitle="6 derniers mois" height={300}>
-                <SpendTrendChart data={trendData || []} />
+                <SpendTrendChart data={mergedTrend} hasLinkedIn={hasLinkedIn} />
               </ChartContainer>
               <AnalysisBlock analyses={aiAnalysis || []} />
             </div>

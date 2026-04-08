@@ -2,6 +2,7 @@ export const CHART_COLORS = {
   google:   '#3B83DD',
   meta:     '#F31B8C',
   sessions: '#E1ED63',
+  linkedin: '#22C55E',
   organic:  '#22C55E',
   warning:  '#F59E0B',
   danger:   '#EF4444',

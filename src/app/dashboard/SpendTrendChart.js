@@ -27,7 +27,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
-export default function SpendTrendChart({ data }) {
+export default function SpendTrendChart({ data, hasLinkedIn }) {
   const formatted = (data || []).map((d) => ({
     ...d,
     month: formatMonthShort(d.report_month),
@@ -72,6 +72,17 @@ export default function SpendTrendChart({ data }) {
           dot={false}
           activeDot={{ r: 5, fill: CHART_COLORS.meta }}
         />
+        {hasLinkedIn && (
+          <Line
+            type="monotone"
+            dataKey="linkedin_spend"
+            name="LinkedIn"
+            stroke={CHART_COLORS.linkedin}
+            strokeWidth={2.5}
+            dot={false}
+            activeDot={{ r: 5, fill: CHART_COLORS.linkedin }}
+          />
+        )}
       </LineChart>
     </ResponsiveContainer>
   );
