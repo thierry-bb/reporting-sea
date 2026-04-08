@@ -16,6 +16,7 @@ import TrafficSourceChart from './TrafficSourceChart';
 import GoogleCampaignsTable from './GoogleCampaignsTable';
 import MetaPlatformTable from './MetaPlatformTable';
 import MetaActionsTable from './MetaActionsTable';
+import MetaCampaignsTable from './MetaCampaignsTable';
 import MetaInsightsCharts from './MetaInsightsCharts';
 import GoogleConversionsTable from './GoogleConversionsTable';
 import TopPagesTable from './TopPagesTable';
@@ -143,7 +144,7 @@ export default async function DashboardPage({ searchParams }) {
     supabase.from(`${tablePrefix}ga4_overview`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle(),
     supabase.from(`${tablePrefix}google_ads_monthly_stats`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
     supabase.from(`${tablePrefix}google_ads_monthly_stats`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth),
-    supabase.from(`${tablePrefix}meta_campaigns`).select('platform, impressions, reach, clicks, page_likes, spend, purchase_value').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
+    supabase.from(`${tablePrefix}meta_campaigns`).select('campaign_name, platform, impressions, reach, clicks, page_likes, spend, ctr_total, purchase_count, purchase_value').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
     supabase.from(`${tablePrefix}gsc_top_queries`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('rank').limit(20),
     supabase.from(`${tablePrefix}ga4_traffic_sources`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
     supabase.from(`${tablePrefix}ga4_top_pages`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('rank').limit(10),
@@ -272,6 +273,7 @@ export default async function DashboardPage({ searchParams }) {
         {activeTab === 'meta' && (
           <>
             <MetaPlatformTable rows={metaCampaigns || []} />
+            <MetaCampaignsTable rows={metaCampaigns || []} />
             <MetaInsightsCharts rows={metaInsights || []} />
             <MetaActionsTable rows={metaActions || []} />
           </>

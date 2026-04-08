@@ -17,16 +17,18 @@ function aggregate(rows) {
     const key = (row.platform || 'unknown').toLowerCase();
     if (!ALLOWED_PLATFORMS.has(key)) continue;
     if (!byPlatform[key]) {
-      byPlatform[key] = { platform: key, impressions: 0, reach: 0, clicks: 0, page_likes: 0, spend: 0, purchase_value: 0 };
+      byPlatform[key] = { platform: key, impressions: 0, reach: 0, clicks: 0, page_likes: 0, spend: 0 };
     }
-    byPlatform[key].impressions    += Number(row.impressions)    || 0;
-    byPlatform[key].reach          += Number(row.reach)          || 0;
-    byPlatform[key].clicks         += Number(row.clicks)         || 0;
-    byPlatform[key].page_likes     += Number(row.page_likes)     || 0;
-    byPlatform[key].spend          += Number(row.spend)          || 0;
-    byPlatform[key].purchase_value += Number(row.purchase_value) || 0;
+    byPlatform[key].impressions += Number(row.impressions) || 0;
+    byPlatform[key].reach       += Number(row.reach)       || 0;
+    byPlatform[key].clicks      += Number(row.clicks)      || 0;
+    byPlatform[key].page_likes  += Number(row.page_likes)  || 0;
+    byPlatform[key].spend       += Number(row.spend)       || 0;
   }
-  return Object.values(byPlatform);
+  return Object.values(byPlatform).map((p) => ({
+    ...p,
+    ctr: p.impressions > 0 ? (p.clicks / p.impressions) * 100 : 0,
+  }));
 }
 
 export default function MetaPlatformTable({ rows }) {
@@ -44,12 +46,12 @@ export default function MetaPlatformTable({ rows }) {
             </span>
           </div>
           <div className={styles.kpiRow}>
-            <KpiCard label="Impressions"       value={formatNumber(p.impressions)}    color="accent" />
-            <KpiCard label="Reach"             value={formatNumber(p.reach)}           color="accent" />
-            <KpiCard label="Clics"             value={formatNumber(p.clicks)}          color="accent" />
-            <KpiCard label="Page Likes"        value={formatNumber(p.page_likes)}      color="accent" />
-            <KpiCard label="Coût"              value={formatCurrency(p.spend)}         color="accent" />
-            <KpiCard label="Valeur achats"     value={formatCurrency(p.purchase_value)} color="accent" />
+            <KpiCard label="Impressions" value={formatNumber(p.impressions)}                       color="accent" />
+            <KpiCard label="Reach"       value={formatNumber(p.reach)}                           color="accent" />
+            <KpiCard label="Clics"       value={formatNumber(p.clicks)}                          color="accent" />
+            <KpiCard label="Page Likes"  value={formatNumber(p.page_likes)}                      color="accent" />
+            <KpiCard label="CTR"         value={p.ctr > 0 ? `${p.ctr.toFixed(2)}%` : '—'}       color="accent" />
+            <KpiCard label="Coût"        value={formatCurrency(p.spend)}                         color="accent" />
           </div>
         </div>
       ))}
