@@ -11,7 +11,6 @@ import {
 import KpiCard from '@/components/dashboard/KpiCard';
 import ChartContainer from '@/components/dashboard/ChartContainer';
 import Header from '@/components/layout/Header';
-import SpendTrendChart from './SpendTrendChart';
 import TrafficSourceChart from './TrafficSourceChart';
 import GoogleCampaignsTable from './GoogleCampaignsTable';
 import MetaPlatformTable from './MetaPlatformTable';
@@ -24,7 +23,7 @@ import Ga4EventsTable from './Ga4EventsTable';
 import GscQueriesTable from './GscQueriesTable';
 import LinkedInCampaignsTable from './LinkedInCampaignsTable';
 import LinkedInEventsTable from './LinkedInEventsTable';
-import ImpressionsTrendChart from './ImpressionsTrendChart';
+
 import PrintButton from '@/components/dashboard/PrintButton';
 import styles from './page.module.css';
 
@@ -84,7 +83,6 @@ export default async function DashboardPage({ searchParams }) {
   const rawMonth = params.month;
   const selectedMonth = normalizeMonth(rawMonth) || getPreviousMonth();
   const previousMonth = getMonthOffset(selectedMonth, -1);
-  const sixMonthsAgo = getMonthOffset(selectedMonth, -5);
 
   // --- Onglets selon le client ---
   const validTabs = ['overview', 'google', 'meta', 'ga4', 'gsc', ...(hasLinkedIn ? ['linkedin'] : [])];
@@ -132,7 +130,6 @@ export default async function DashboardPage({ searchParams }) {
     { data: gscQueries },
     { data: trafficSources },
     { data: topPages },
-    { data: trendData },
     { data: monthsList },
     { data: googleConversions },
     { data: metaActions },
@@ -144,9 +141,6 @@ export default async function DashboardPage({ searchParams }) {
     { data: metaCampaignsPrev },
     { data: linkedInOverviewPrev },
     { data: linkedInEvents },
-    { data: linkedInTrend },
-    { data: googleImpTrend },
-    { data: metaImpTrend },
   ] = await Promise.all([
     supabase.from(`${tablePrefix}global_monthly_reporting`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
     supabase.from(`${tablePrefix}global_monthly_reporting`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle(),
@@ -158,7 +152,6 @@ export default async function DashboardPage({ searchParams }) {
     supabase.from(`${tablePrefix}gsc_top_queries`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('rank').limit(20),
     supabase.from(`${tablePrefix}ga4_traffic_sources`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
     supabase.from(`${tablePrefix}ga4_top_pages`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('rank').limit(10),
-    supabase.from(`${tablePrefix}global_monthly_reporting`).select('report_month, google_spend, meta_spend, total_ads_spend').eq('client_id', currentClient.id).gte('report_month', sixMonthsAgo).lte('report_month', selectedMonth).order('report_month'),
     supabase.from(`${tablePrefix}ga4_overview`).select('report_month').eq('client_id', currentClient.id).order('report_month', { ascending: false }).limit(24),
     supabase.from(`${tablePrefix}google_ads_conversions_monthly`).select('campaign_name, conversion_name, conversions').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('conversions', { ascending: false }),
     supabase.from(`${tablePrefix}meta_actions`).select('action_type, action_value').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('action_value', { ascending: false }),
@@ -171,18 +164,13 @@ export default async function DashboardPage({ searchParams }) {
       ? supabase.from(`${tablePrefix}linkedin_ads_campaigns`).select('campaign_name, campaign_id, status, objective, impressions, clicks, conversions, cost_chf, conv_value_chf').eq('client_id', currentClient.id).eq('report_month', selectedMonth)
       : Promise.resolve({ data: [] }),
     supabase.from(`${tablePrefix}ga4_events_report`).select('event_name, event_count, total_users').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('event_count', { ascending: false }),
-    supabase.from(`${tablePrefix}meta_campaigns`).select('impressions, reach, clicks, page_likes, spend, platform').eq('client_id', currentClient.id).eq('report_month', previousMonth),
+    supabase.from(`${tablePrefix}meta_campaigns`).select('impressions, reach, clicks, page_likes, spend, platform, purchase_count, purchase_value').eq('client_id', currentClient.id).eq('report_month', previousMonth),
     hasLinkedIn
       ? supabase.from(`${tablePrefix}linkedin_ads_overview`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle()
       : Promise.resolve({ data: null }),
     hasLinkedIn
       ? supabase.from(`${tablePrefix}linkedin_ads_events`).select('conversion_name, conversions').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('conversions', { ascending: false })
       : Promise.resolve({ data: [] }),
-    hasLinkedIn
-      ? supabase.from(`${tablePrefix}linkedin_ads_overview`).select('report_month, total_cost_chf, total_impressions').eq('client_id', currentClient.id).gte('report_month', sixMonthsAgo).lte('report_month', selectedMonth).order('report_month')
-      : Promise.resolve({ data: [] }),
-    supabase.from(`${tablePrefix}google_ads_monthly_stats`).select('report_month, impressions').eq('client_id', currentClient.id).gte('report_month', sixMonthsAgo).lte('report_month', selectedMonth),
-    supabase.from(`${tablePrefix}meta_campaigns`).select('report_month, impressions').eq('client_id', currentClient.id).gte('report_month', sixMonthsAgo).lte('report_month', selectedMonth),
   ]);
 
   // --- Calculs agrégés ---
@@ -203,40 +191,6 @@ export default async function DashboardPage({ searchParams }) {
   const newUsersDelta = calcDelta(ga4Current?.new_users, ga4Prev?.new_users);
   const usersDelta = calcDelta(ga4Current?.total_users, ga4Prev?.total_users);
 
-  // Agréger les impressions Google par mois
-  const googleImpByMonth = {};
-  for (const r of (googleImpTrend || [])) {
-    const m = r.report_month;
-    googleImpByMonth[m] = (googleImpByMonth[m] || 0) + (Number(r.impressions) || 0);
-  }
-  // Agréger les impressions Meta par mois
-  const metaImpByMonth = {};
-  for (const r of (metaImpTrend || [])) {
-    const m = r.report_month;
-    metaImpByMonth[m] = (metaImpByMonth[m] || 0) + (Number(r.impressions) || 0);
-  }
-  // Construire la série impressions (union des mois présents)
-  const impMonths = [...new Set([
-    ...Object.keys(googleImpByMonth),
-    ...Object.keys(metaImpByMonth),
-    ...(hasLinkedIn ? (linkedInTrend || []).map((r) => r.report_month) : []),
-  ])].sort();
-  const impressionsTrend = impMonths.map((m) => {
-    const li = hasLinkedIn ? (linkedInTrend || []).find((r) => r.report_month === m) : null;
-    return {
-      report_month: m,
-      google_impressions: googleImpByMonth[m] ?? null,
-      meta_impressions:   metaImpByMonth[m]   ?? null,
-      linkedin_impressions: li?.total_impressions ?? null,
-    };
-  });
-
-  // Fusionner LinkedIn spend dans trendData
-  const mergedTrend = (trendData || []).map((d) => {
-    const li = hasLinkedIn ? (linkedInTrend || []).find((r) => r.report_month === d.report_month) : null;
-    return { ...d, linkedin_spend: li?.total_cost_chf ?? null };
-  });
-
   // Total Spend (inclut LinkedIn si applicable)
   const totalSpend     = (globalCurrent?.total_ads_spend || 0) + (hasLinkedIn ? (linkedInOverview?.total_cost_chf || 0) : 0);
   const totalSpendPrev = (globalPrev?.total_ads_spend    || 0) + (hasLinkedIn ? (linkedInOverviewPrev?.total_cost_chf || 0) : 0);
@@ -251,6 +205,50 @@ export default async function DashboardPage({ searchParams }) {
   const liConvValueDelta     = calcDelta(linkedInOverview?.total_conv_value_chf,linkedInOverviewPrev?.total_conv_value_chf);
   const liCtrDelta           = calcDelta(linkedInOverview?.global_ctr_percent,  linkedInOverviewPrev?.global_ctr_percent);
   const liRoasDelta          = calcDelta(linkedInOverview?.global_roas,         linkedInOverviewPrev?.global_roas);
+
+  // Agrégats Meta conversions / ROAS
+  function aggMetaConversions(rows) {
+    let purchases = 0, value = 0, spend = 0;
+    for (const r of (rows || [])) {
+      purchases += Number(r.purchase_count) || 0;
+      value     += Number(r.purchase_value) || 0;
+      spend     += Number(r.spend)          || 0;
+    }
+    return { purchases, value, roas: spend > 0 ? value / spend : null };
+  }
+  const metaConvCur  = aggMetaConversions(metaCampaigns);
+  const metaConvPrev = aggMetaConversions(metaCampaignsPrev);
+
+  // Conversions overview
+  const googleConvCur  = googleAgg.conversions || null;
+  const googleConvPrev = googleAggPrev.conversions || null;
+  const liConvCur      = linkedInOverview?.total_conversions  ?? null;
+  const liConvPrev     = linkedInOverviewPrev?.total_conversions ?? null;
+  const totalConvCur   = (googleConvCur || 0) + (metaConvCur.purchases || 0) + (hasLinkedIn ? (liConvCur || 0) : 0) || null;
+  const totalConvPrev  = (googleConvPrev || 0) + (metaConvPrev.purchases || 0) + (hasLinkedIn ? (liConvPrev || 0) : 0) || null;
+
+  const totalConvDelta   = calcDelta(totalConvCur,          totalConvPrev);
+  const googleConvDelta2 = calcDelta(googleConvCur,         googleConvPrev);
+  const metaConvDelta    = calcDelta(metaConvCur.purchases, metaConvPrev.purchases);
+  const liConvDelta2     = calcDelta(liConvCur,             liConvPrev);
+
+  // ROAS overview (Google ROAS non disponible → '—')
+  const googleRoasCur  = googleAgg.roas;
+  const googleRoasPrev = googleAggPrev.roas;
+  const metaRoasCur    = metaConvCur.roas;
+  const metaRoasPrev   = metaConvPrev.roas;
+  const liRoasCur      = linkedInOverview?.global_roas  ?? null;
+  const liRoasPrev     = linkedInOverviewPrev?.global_roas ?? null;
+  // Total ROAS = (google_value + meta_value + li_value) / totalSpend
+  const totalRevCur  = (googleAgg.conversionsValue || 0) + (metaConvCur.value || 0) + (hasLinkedIn ? (linkedInOverview?.total_conv_value_chf || 0) : 0);
+  const totalRevPrev = (googleAggPrev.conversionsValue || 0) + (metaConvPrev.value || 0) + (hasLinkedIn ? (linkedInOverviewPrev?.total_conv_value_chf || 0) : 0);
+  const totalRoasCur  = totalSpend     > 0 ? totalRevCur  / totalSpend     : null;
+  const totalRoasPrev = totalSpendPrev > 0 ? totalRevPrev / totalSpendPrev : null;
+
+  const totalRoasDelta  = calcDelta(totalRoasCur,   totalRoasPrev);
+  const googleRoasDelta = calcDelta(googleRoasCur,  googleRoasPrev);
+  const metaRoasDelta2  = calcDelta(metaRoasCur,    metaRoasPrev);
+  const liRoasDelta2    = calcDelta(liRoasCur,      liRoasPrev);
 
   // Mois disponibles pour le sélecteur
   const availableMonths = (monthsList || []).map((r) => r.report_month);
@@ -330,15 +328,75 @@ export default async function DashboardPage({ searchParams }) {
               )}
             </section>
 
-            <div className={styles.twoCol}>
-              <ChartContainer title="Évolution du budget" subtitle="6 derniers mois" height={300}>
-                <SpendTrendChart data={mergedTrend} hasLinkedIn={hasLinkedIn} />
-              </ChartContainer>
-              <AnalysisBlock analyses={aiAnalysis || []} />
-            </div>
-            <ChartContainer title="Évolution des impressions" subtitle="6 derniers mois" height={300}>
-              <ImpressionsTrendChart data={impressionsTrend} hasLinkedIn={hasLinkedIn} />
-            </ChartContainer>
+            {/* Ligne Conversions */}
+            <section className={styles.kpiGrid}>
+              <KpiCard
+                label="Total Conversions"
+                value={formatNumber(totalConvCur)}
+                delta={totalConvDelta}
+                color="neutral"
+                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="20 6 9 17 4 12"/></svg>}
+              />
+              <KpiCard
+                label="Conversions Google"
+                value={formatNumber(googleConvCur)}
+                delta={googleConvDelta2}
+                color="info"
+                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"/></svg>}
+              />
+              <KpiCard
+                label="Conversions Meta"
+                value={formatNumber(metaConvCur.purchases)}
+                delta={metaConvDelta}
+                color="accent"
+                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>}
+              />
+              {hasLinkedIn && (
+                <KpiCard
+                  label="Conversions LinkedIn"
+                  value={formatNumber(liConvCur)}
+                  delta={liConvDelta2}
+                  color="linkedin"
+                  icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>}
+                />
+              )}
+            </section>
+
+            {/* Ligne ROAS */}
+            <section className={styles.kpiGrid}>
+              <KpiCard
+                label="ROAS Total"
+                value={totalRoasCur != null ? `×${totalRoasCur.toFixed(2)}` : '—'}
+                delta={totalRoasDelta}
+                color="neutral"
+                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
+              />
+              <KpiCard
+                label="ROAS Google"
+                value={googleRoasCur != null ? `×${googleRoasCur.toFixed(2)}` : '—'}
+                delta={googleRoasDelta}
+                color="info"
+                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"/></svg>}
+              />
+              <KpiCard
+                label="ROAS Meta"
+                value={metaRoasCur != null ? `×${metaRoasCur.toFixed(2)}` : '—'}
+                delta={metaRoasDelta2}
+                color="accent"
+                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>}
+              />
+              {hasLinkedIn && (
+                <KpiCard
+                  label="ROAS LinkedIn"
+                  value={liRoasCur != null ? `×${Number(liRoasCur).toFixed(2)}` : '—'}
+                  delta={liRoasDelta2}
+                  color="linkedin"
+                  icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>}
+                />
+              )}
+            </section>
+
+            <AnalysisBlock analyses={aiAnalysis || []} />
           </>
         )}
 

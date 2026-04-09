@@ -147,13 +147,16 @@ export function aggregateGoogleStats(campaigns) {
   const clicks = campaigns.reduce((s, c) => s + (parseInt(c.clicks) || 0), 0);
   const impressions = campaigns.reduce((s, c) => s + (parseInt(c.impressions) || 0), 0);
   const conversions = campaigns.reduce((s, c) => s + (parseFloat(c.conversions) || 0), 0);
+  const conversionsValue = campaigns.reduce((s, c) => s + (parseFloat(c.conversions_value) || 0), 0);
   return {
     cost,
     clicks,
     impressions,
     conversions,
+    conversionsValue,
     ctr: calcCTR(clicks, impressions),
     cpa: calcCPA(cost, conversions),
+    roas: cost > 0 ? conversionsValue / cost : null,
   };
 }
 
