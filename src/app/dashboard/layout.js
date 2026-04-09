@@ -1,9 +1,14 @@
+import { createSupabaseServerClient } from '@/lib/supabase-server';
 import Sidebar from '@/components/layout/Sidebar';
 
-export default function DashboardLayout({ children }) {
+export default async function DashboardLayout({ children }) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const role = user?.user_metadata?.role || 'client';
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <Sidebar />
+      <Sidebar role={role} />
       <div
         style={{
           marginLeft: 'var(--sidebar-width)',

@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   {
     label: 'Dashboard',
     href: '/dashboard',
+    adminOnly: false,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="7" height="7" rx="1" />
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
   {
     label: 'Paramètres',
     href: '/dashboard/settings',
+    adminOnly: true,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="3" />
@@ -31,7 +33,7 @@ const NAV_ITEMS = [
   },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ role }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -57,7 +59,7 @@ export default function Sidebar() {
       {/* Navigation */}
       <nav className={styles.nav}>
         <span className={styles.navSection}>Navigation</span>
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.filter((item) => !item.adminOnly || role === 'agency').map((item) => {
           const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
           return (
             <Link

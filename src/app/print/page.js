@@ -5,7 +5,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server';
 import {
   formatCurrency, formatPercent, formatNumber, formatMonth,
   normalizeMonth, getMonthOffset, getPreviousMonth,
-  calcDelta, calcCPA,
+  calcDelta,
   aggregateGoogleStats, aggregateMetaStats,
 } from '@/lib/formatters';
 import KpiCard from '@/components/dashboard/KpiCard';
@@ -114,11 +114,6 @@ export default async function PrintPage({ searchParams }) {
   const sessionsDelta = calcDelta(ga4Current?.sessions, ga4Prev?.sessions);
   const usersDelta = calcDelta(ga4Current?.total_users, ga4Prev?.total_users);
 
-  const googleTargetCPA = currentClient.target_cpa_google;
-  const googleMaxCPA = currentClient.max_cpa_google;
-  const metaTargetCPA = currentClient.target_cpa_meta;
-  const metaMaxCPA = currentClient.max_cpa_meta;
-
   return (
     <div className={styles.page}>
       {/* Styles inline — s'appliquent à l'écran ET en PDF, sans @media print */}
@@ -207,11 +202,6 @@ export default async function PrintPage({ searchParams }) {
         </div>
         <GoogleCampaignsTable rows={googleStats || []} />
         <GoogleConversionsTable rows={googleConversions || []} />
-        {googleTargetCPA && googleAgg.cpa > 0 && (
-          <div className={styles.targets}>
-            <TargetProgress label="CPA Google" actual={googleAgg.cpa} target={googleTargetCPA} max={googleMaxCPA} formatFn={formatCurrency} invertGood />
-          </div>
-        )}
       </div>
 
       {/* ── META ADS ── */}
@@ -220,11 +210,6 @@ export default async function PrintPage({ searchParams }) {
         <MetaPlatformTable rows={metaCampaigns || []} />
         <MetaInsightsCharts rows={metaInsights || []} />
         <MetaActionsTable rows={metaActions || []} />
-        {metaTargetCPA && metaAgg.spend > 0 && (
-          <div className={styles.targets}>
-            <TargetProgress label="CPA Meta" actual={calcCPA(metaAgg.spend, purchases)} target={metaTargetCPA} max={metaMaxCPA} formatFn={formatCurrency} invertGood />
-          </div>
-        )}
       </div>
 
       {/* ── GA4 ── */}
