@@ -24,6 +24,7 @@ import Ga4EventsTable from './Ga4EventsTable';
 import GscQueriesTable from './GscQueriesTable';
 import LinkedInCampaignsTable from './LinkedInCampaignsTable';
 import LinkedInEventsTable from './LinkedInEventsTable';
+import ImpressionsTrendChart from './ImpressionsTrendChart';
 import PrintButton from '@/components/dashboard/PrintButton';
 import styles from './page.module.css';
 
@@ -144,6 +145,8 @@ export default async function DashboardPage({ searchParams }) {
     { data: linkedInOverviewPrev },
     { data: linkedInEvents },
     { data: linkedInTrend },
+    { data: googleImpTrend },
+    { data: metaImpTrend },
   ] = await Promise.all([
     supabase.from(`${tablePrefix}global_monthly_reporting`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
     supabase.from(`${tablePrefix}global_monthly_reporting`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle(),
@@ -176,8 +179,10 @@ export default async function DashboardPage({ searchParams }) {
       ? supabase.from(`${tablePrefix}linkedin_ads_events`).select('conversion_name, conversions').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('conversions', { ascending: false })
       : Promise.resolve({ data: [] }),
     hasLinkedIn
-      ? supabase.from(`${tablePrefix}linkedin_ads_overview`).select('report_month, total_cost_chf').eq('client_id', currentClient.id).gte('report_month', sixMonthsAgo).lte('report_month', selectedMonth).order('report_month')
+      ? supabase.from(`${tablePrefix}linkedin_ads_overview`).select('report_month, total_cost_chf, total_impressions').eq('client_id', currentClient.id).gte('report_month', sixMonthsAgo).lte('report_month', selectedMonth).order('report_month')
       : Promise.resolve({ data: [] }),
+    supabase.from(`${tablePrefix}google_ads_monthly_stats`).select('report_month, impressions').eq('client_id', currentClient.id).gte('report_month', sixMonthsAgo).lte('report_month', selectedMonth),
+    supabase.from(`${tablePrefix}meta_campaigns`).select('report_month, impressions').eq('client_id', currentClient.id).gte('report_month', sixMonthsAgo).lte('report_month', selectedMonth),
   ]);
 
   // --- Calculs agrégés ---
@@ -198,22 +203,33 @@ export default async function DashboardPage({ searchParams }) {
   const newUsersDelta = calcDelta(ga4Current?.new_users, ga4Prev?.new_users);
   const usersDelta = calcDelta(ga4Current?.total_users, ga4Prev?.total_users);
 
-  // Deltas Meta par plateforme
-  function aggMetaByPlatform(rows) {
-    const map = {};
-    for (const r of (rows || [])) {
-      const k = (r.platform || '').toLowerCase();
-      if (!map[k]) map[k] = { impressions: 0, reach: 0, clicks: 0, page_likes: 0, spend: 0 };
-      map[k].impressions += Number(r.impressions) || 0;
-      map[k].reach       += Number(r.reach)       || 0;
-      map[k].clicks      += Number(r.clicks)      || 0;
-      map[k].page_likes  += Number(r.page_likes)  || 0;
-      map[k].spend       += Number(r.spend)       || 0;
-    }
-    return map;
+  // Agréger les impressions Google par mois
+  const googleImpByMonth = {};
+  for (const r of (googleImpTrend || [])) {
+    const m = r.report_month;
+    googleImpByMonth[m] = (googleImpByMonth[m] || 0) + (Number(r.impressions) || 0);
   }
-  const metaAggCur  = aggMetaByPlatform(metaCampaigns);
-  const metaAggPrev = aggMetaByPlatform(metaCampaignsPrev);
+  // Agréger les impressions Meta par mois
+  const metaImpByMonth = {};
+  for (const r of (metaImpTrend || [])) {
+    const m = r.report_month;
+    metaImpByMonth[m] = (metaImpByMonth[m] || 0) + (Number(r.impressions) || 0);
+  }
+  // Construire la série impressions (union des mois présents)
+  const impMonths = [...new Set([
+    ...Object.keys(googleImpByMonth),
+    ...Object.keys(metaImpByMonth),
+    ...(hasLinkedIn ? (linkedInTrend || []).map((r) => r.report_month) : []),
+  ])].sort();
+  const impressionsTrend = impMonths.map((m) => {
+    const li = hasLinkedIn ? (linkedInTrend || []).find((r) => r.report_month === m) : null;
+    return {
+      report_month: m,
+      google_impressions: googleImpByMonth[m] ?? null,
+      meta_impressions:   metaImpByMonth[m]   ?? null,
+      linkedin_impressions: li?.total_impressions ?? null,
+    };
+  });
 
   // Fusionner LinkedIn spend dans trendData
   const mergedTrend = (trendData || []).map((d) => {
@@ -278,7 +294,7 @@ export default async function DashboardPage({ searchParams }) {
                 value={formatCurrency(hasLinkedIn ? totalSpend : globalCurrent?.total_ads_spend)}
                 delta={hasLinkedIn ? totalSpendDelta : spendDelta}
                 color="neutral"
-                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>}
+                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
               />
               <KpiCard
                 label="Google Ads Spend"
@@ -320,6 +336,9 @@ export default async function DashboardPage({ searchParams }) {
               </ChartContainer>
               <AnalysisBlock analyses={aiAnalysis || []} />
             </div>
+            <ChartContainer title="Évolution des impressions" subtitle="6 derniers mois" height={300}>
+              <ImpressionsTrendChart data={impressionsTrend} hasLinkedIn={hasLinkedIn} />
+            </ChartContainer>
           </>
         )}
 
