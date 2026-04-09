@@ -26,8 +26,9 @@ import styles from './page.module.css';
 export const dynamic = 'force-dynamic';
 
 const CLIENT_TABLE_PREFIX = {
-  'HEG':  'heg_',
-  'Yneo': 'yneo_',
+  'HEG':   'heg_',
+  'Yneo':  'yneo_',
+  'Ifage': 'ifage_',
 };
 
 const LINKEDIN_CLIENTS = ['HEG'];

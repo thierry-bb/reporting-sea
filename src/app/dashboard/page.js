@@ -31,12 +31,17 @@ export const dynamic = 'force-dynamic';
 
 // Clients utilisant des tables dédiées (préfixées)
 const CLIENT_TABLE_PREFIX = {
-  'HEG':  'heg_',
-  'Yneo': 'yneo_',
+  'HEG':     'heg_',
+  'Yneo':    'yneo_',
+  'Ifage':   'ifage_',
+  'Stryker': 'stryker_',
 };
 
 // Clients avec onglet LinkedIn (à la place de GSC)
-const LINKEDIN_CLIENTS = ['HEG'];
+const LINKEDIN_CLIENTS = ['HEG', 'Stryker'];
+
+// Clients avec LinkedIn uniquement (pas de Google/Meta/GA4/GSC)
+const LINKEDIN_ONLY_CLIENTS = ['Stryker'];
 
 export default async function DashboardPage({ searchParams }) {
   const params = await searchParams;
@@ -78,6 +83,7 @@ export default async function DashboardPage({ searchParams }) {
   // --- Préfixe de tables selon le client ---
   const tablePrefix = CLIENT_TABLE_PREFIX[currentClient.client] || '';
   const hasLinkedIn = LINKEDIN_CLIENTS.includes(currentClient.client);
+  const linkedInOnly = LINKEDIN_ONLY_CLIENTS.includes(currentClient.client);
 
   // --- Résoudre le mois sélectionné ---
   const rawMonth = params.month;
@@ -85,17 +91,24 @@ export default async function DashboardPage({ searchParams }) {
   const previousMonth = getMonthOffset(selectedMonth, -1);
 
   // --- Onglets selon le client ---
-  const validTabs = ['overview', 'google', 'meta', 'ga4', 'gsc', ...(hasLinkedIn ? ['linkedin'] : [])];
+  const validTabs = linkedInOnly
+    ? ['overview', 'linkedin']
+    : ['overview', 'google', 'meta', 'ga4', ...(hasLinkedIn ? ['linkedin'] : ['gsc'])];
   const activeTab = validTabs.includes(params.tab) ? params.tab : 'overview';
 
-  const tabs = [
-    { id: 'overview', label: 'Overview',       color: null },
-    { id: 'google',   label: 'Google Ads',     color: 'blue' },
-    { id: 'meta',     label: 'Meta Ads',       color: 'pink' },
-    { id: 'ga4',      label: 'GA4',            color: 'yellow' },
-    ...(!hasLinkedIn ? [{ id: 'gsc', label: 'Search Console', color: null }] : []),
-    ...(hasLinkedIn ? [{ id: 'linkedin', label: 'LinkedIn', color: 'green' }] : []),
-  ];
+  const tabs = linkedInOnly
+    ? [
+        { id: 'overview',  label: 'Overview',  color: null },
+        { id: 'linkedin',  label: 'LinkedIn',  color: 'green' },
+      ]
+    : [
+        { id: 'overview', label: 'Overview',       color: null },
+        { id: 'google',   label: 'Google Ads',     color: 'blue' },
+        { id: 'meta',     label: 'Meta Ads',       color: 'pink' },
+        { id: 'ga4',      label: 'GA4',            color: 'yellow' },
+        ...(!hasLinkedIn ? [{ id: 'gsc', label: 'Search Console', color: null }] : []),
+        ...(hasLinkedIn   ? [{ id: 'linkedin', label: 'LinkedIn', color: 'green' }] : []),
+      ];
 
   // --- Si params manquants, rediriger avec les bons params ---
   if (!params.client || !params.month) {
@@ -103,8 +116,9 @@ export default async function DashboardPage({ searchParams }) {
 
     // Pour un client : chercher le mois le plus récent avec des données
     if (role === 'client' && !params.month) {
+      const monthTable = linkedInOnly ? `${tablePrefix}linkedin_ads_overview` : `${tablePrefix}global_monthly_reporting`;
       const { data: latestRow } = await supabase
-        .from(`${tablePrefix}global_monthly_reporting`)
+        .from(monthTable)
         .select('report_month')
         .eq('client_id', currentClient.id)
         .order('report_month', { ascending: false })
@@ -142,21 +156,23 @@ export default async function DashboardPage({ searchParams }) {
     { data: linkedInOverviewPrev },
     { data: linkedInEvents },
   ] = await Promise.all([
-    supabase.from(`${tablePrefix}global_monthly_reporting`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
-    supabase.from(`${tablePrefix}global_monthly_reporting`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle(),
-    supabase.from(`${tablePrefix}ga4_overview`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
-    supabase.from(`${tablePrefix}ga4_overview`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle(),
-    supabase.from(`${tablePrefix}google_ads_monthly_stats`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
-    supabase.from(`${tablePrefix}google_ads_monthly_stats`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth),
-    supabase.from(`${tablePrefix}meta_campaigns`).select('campaign_name, platform, impressions, reach, clicks, page_likes, spend, ctr_total, purchase_count, purchase_value').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
-    supabase.from(`${tablePrefix}gsc_top_queries`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('rank').limit(20),
-    supabase.from(`${tablePrefix}ga4_traffic_sources`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
-    supabase.from(`${tablePrefix}ga4_top_pages`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('rank').limit(10),
-    supabase.from(`${tablePrefix}ga4_overview`).select('report_month').eq('client_id', currentClient.id).order('report_month', { ascending: false }).limit(24),
-    supabase.from(`${tablePrefix}google_ads_conversions_monthly`).select('campaign_name, conversion_name, conversions').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('conversions', { ascending: false }),
-    supabase.from(`${tablePrefix}meta_actions`).select('action_type, action_value').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('action_value', { ascending: false }),
-    supabase.from(`${tablePrefix}ai_analyses`).select('platform, analysis_json').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
-    supabase.from(`${tablePrefix}meta_insights`).select('breakdown_type, breakdown_value, impressions, percentage').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
+    linkedInOnly ? Promise.resolve({ data: null }) : supabase.from(`${tablePrefix}global_monthly_reporting`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
+    linkedInOnly ? Promise.resolve({ data: null }) : supabase.from(`${tablePrefix}global_monthly_reporting`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle(),
+    linkedInOnly ? Promise.resolve({ data: null }) : supabase.from(`${tablePrefix}ga4_overview`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
+    linkedInOnly ? Promise.resolve({ data: null }) : supabase.from(`${tablePrefix}ga4_overview`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle(),
+    linkedInOnly ? Promise.resolve({ data: [] })   : supabase.from(`${tablePrefix}google_ads_monthly_stats`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
+    linkedInOnly ? Promise.resolve({ data: [] })   : supabase.from(`${tablePrefix}google_ads_monthly_stats`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth),
+    linkedInOnly ? Promise.resolve({ data: [] })   : supabase.from(`${tablePrefix}meta_campaigns`).select('campaign_name, platform, impressions, reach, clicks, page_likes, spend, ctr_total, purchase_count, purchase_value').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
+    linkedInOnly ? Promise.resolve({ data: [] })   : supabase.from(`${tablePrefix}gsc_top_queries`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('rank').limit(20),
+    linkedInOnly ? Promise.resolve({ data: [] })   : supabase.from(`${tablePrefix}ga4_traffic_sources`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
+    linkedInOnly ? Promise.resolve({ data: [] })   : supabase.from(`${tablePrefix}ga4_top_pages`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('rank').limit(10),
+    linkedInOnly
+      ? supabase.from(`${tablePrefix}linkedin_ads_overview`).select('report_month').eq('client_id', currentClient.id).order('report_month', { ascending: false }).limit(24)
+      : supabase.from(`${tablePrefix}ga4_overview`).select('report_month').eq('client_id', currentClient.id).order('report_month', { ascending: false }).limit(24),
+    linkedInOnly ? Promise.resolve({ data: [] })   : supabase.from(`${tablePrefix}google_ads_conversions_monthly`).select('campaign_name, conversion_name, conversions').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('conversions', { ascending: false }),
+    linkedInOnly ? Promise.resolve({ data: [] })   : supabase.from(`${tablePrefix}meta_actions`).select('action_type, action_value').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('action_value', { ascending: false }),
+    linkedInOnly ? Promise.resolve({ data: [] })   : supabase.from(`${tablePrefix}ai_analyses`).select('platform, analysis_json').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
+    linkedInOnly ? Promise.resolve({ data: [] })   : supabase.from(`${tablePrefix}meta_insights`).select('breakdown_type, breakdown_value, impressions, percentage').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
     hasLinkedIn
       ? supabase.from(`${tablePrefix}linkedin_ads_overview`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle()
       : Promise.resolve({ data: null }),
@@ -286,117 +302,173 @@ export default async function DashboardPage({ searchParams }) {
         {/* ── OVERVIEW ── */}
         {activeTab === 'overview' && (
           <>
-            <section className={styles.kpiGrid}>
-              <KpiCard
-                label="Total Ads Spend"
-                value={formatCurrency(hasLinkedIn ? totalSpend : globalCurrent?.total_ads_spend)}
-                delta={hasLinkedIn ? totalSpendDelta : spendDelta}
-                color="neutral"
-                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
-              />
-              <KpiCard
-                label="Google Ads Spend"
-                value={formatCurrency(globalCurrent?.google_spend)}
-                delta={googleDelta}
-                color="info"
-                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"/></svg>}
-              />
-              <KpiCard
-                label="Meta Ads Spend"
-                value={formatCurrency(globalCurrent?.meta_spend)}
-                delta={metaDelta}
-                color="accent"
-                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>}
-              />
-              {hasLinkedIn ? (
-                <KpiCard
-                  label="LinkedIn Ads Spend"
-                  value={formatCurrency(linkedInOverview?.total_cost_chf)}
-                  delta={liCostDelta}
-                  color="linkedin"
-                  invertDelta
-                  icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>}
-                />
-              ) : (
-                <KpiCard
-                  label="Sessions GA4"
-                  value={formatNumber(ga4Current?.sessions)}
-                  delta={sessionsDelta}
-                  color="positive"
-                  icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>}
-                />
-              )}
-            </section>
+            {linkedInOnly ? (
+              /* Stryker : LinkedIn uniquement */
+              <>
+                <section className={styles.kpiGrid}>
+                  <KpiCard
+                    label="LinkedIn Ads Spend"
+                    value={formatCurrency(linkedInOverview?.total_cost_chf)}
+                    delta={liCostDelta}
+                    color="linkedin"
+                    invertDelta
+                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>}
+                  />
+                  <KpiCard
+                    label="Impressions"
+                    value={formatNumber(linkedInOverview?.total_impressions)}
+                    delta={liImpressionsDelta}
+                    color="linkedin"
+                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
+                  />
+                  <KpiCard
+                    label="Clics"
+                    value={formatNumber(linkedInOverview?.total_clicks)}
+                    delta={liClicksDelta}
+                    color="linkedin"
+                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M15 3h6v6M14 10l6.1-6.1M9 21H3v-6M10 14l-6.1 6.1"/></svg>}
+                  />
+                  <KpiCard
+                    label="Conversions"
+                    value={formatNumber(linkedInOverview?.total_conversions)}
+                    delta={liConversionsDelta}
+                    color="linkedin"
+                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="20 6 9 17 4 12"/></svg>}
+                  />
+                </section>
+                <section className={styles.kpiGrid}>
+                  <KpiCard
+                    label="ROAS"
+                    value={liRoasCur != null ? `×${Number(liRoasCur).toFixed(2)}` : '—'}
+                    delta={liRoasDelta2}
+                    color="linkedin"
+                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
+                  />
+                  <KpiCard
+                    label="CTR"
+                    value={linkedInOverview?.global_ctr_percent != null ? formatPercent(linkedInOverview.global_ctr_percent) : '—'}
+                    delta={liCtrDelta}
+                    color="linkedin"
+                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>}
+                  />
+                </section>
+              </>
+            ) : (
+              /* Autres clients : overview complet */
+              <>
+                <section className={styles.kpiGrid}>
+                  <KpiCard
+                    label="Total Ads Spend"
+                    value={formatCurrency(hasLinkedIn ? totalSpend : globalCurrent?.total_ads_spend)}
+                    delta={hasLinkedIn ? totalSpendDelta : spendDelta}
+                    color="neutral"
+                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
+                  />
+                  <KpiCard
+                    label="Google Ads Spend"
+                    value={formatCurrency(globalCurrent?.google_spend)}
+                    delta={googleDelta}
+                    color="info"
+                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"/></svg>}
+                  />
+                  <KpiCard
+                    label="Meta Ads Spend"
+                    value={formatCurrency(globalCurrent?.meta_spend)}
+                    delta={metaDelta}
+                    color="accent"
+                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>}
+                  />
+                  {hasLinkedIn ? (
+                    <KpiCard
+                      label="LinkedIn Ads Spend"
+                      value={formatCurrency(linkedInOverview?.total_cost_chf)}
+                      delta={liCostDelta}
+                      color="linkedin"
+                      invertDelta
+                      icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>}
+                    />
+                  ) : (
+                    <KpiCard
+                      label="Sessions GA4"
+                      value={formatNumber(ga4Current?.sessions)}
+                      delta={sessionsDelta}
+                      color="positive"
+                      icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>}
+                    />
+                  )}
+                </section>
 
-            {/* Ligne Conversions */}
-            <section className={styles.kpiGrid}>
-              <KpiCard
-                label="Total Conversions"
-                value={formatNumber(totalConvCur)}
-                delta={totalConvDelta}
-                color="neutral"
-                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="20 6 9 17 4 12"/></svg>}
-              />
-              <KpiCard
-                label="Conversions Google"
-                value={formatNumber(googleConvCur)}
-                delta={googleConvDelta2}
-                color="info"
-                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"/></svg>}
-              />
-              <KpiCard
-                label="Conversions Meta"
-                value={formatNumber(metaConvCur.purchases)}
-                delta={metaConvDelta}
-                color="accent"
-                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>}
-              />
-              {hasLinkedIn && (
-                <KpiCard
-                  label="Conversions LinkedIn"
-                  value={formatNumber(liConvCur)}
-                  delta={liConvDelta2}
-                  color="linkedin"
-                  icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>}
-                />
-              )}
-            </section>
+                {/* Ligne Conversions */}
+                <section className={styles.kpiGrid}>
+                  <KpiCard
+                    label="Total Conversions"
+                    value={formatNumber(totalConvCur)}
+                    delta={totalConvDelta}
+                    color="neutral"
+                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="20 6 9 17 4 12"/></svg>}
+                  />
+                  <KpiCard
+                    label="Conversions Google"
+                    value={formatNumber(googleConvCur)}
+                    delta={googleConvDelta2}
+                    color="info"
+                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"/></svg>}
+                  />
+                  <KpiCard
+                    label="Conversions Meta"
+                    value={formatNumber(metaConvCur.purchases)}
+                    delta={metaConvDelta}
+                    color="accent"
+                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>}
+                  />
+                  {hasLinkedIn && (
+                    <KpiCard
+                      label="Conversions LinkedIn"
+                      value={formatNumber(liConvCur)}
+                      delta={liConvDelta2}
+                      color="linkedin"
+                      icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>}
+                    />
+                  )}
+                </section>
 
-            {/* Ligne ROAS */}
-            <section className={styles.kpiGrid}>
-              <KpiCard
-                label="ROAS Total"
-                value={totalRoasCur != null ? `×${totalRoasCur.toFixed(2)}` : '—'}
-                delta={totalRoasDelta}
-                color="neutral"
-                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
-              />
-              <KpiCard
-                label="ROAS Google"
-                value={googleRoasCur != null ? `×${googleRoasCur.toFixed(2)}` : '—'}
-                delta={googleRoasDelta}
-                color="info"
-                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"/></svg>}
-              />
-              <KpiCard
-                label="ROAS Meta"
-                value={metaRoasCur != null ? `×${metaRoasCur.toFixed(2)}` : '—'}
-                delta={metaRoasDelta2}
-                color="accent"
-                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>}
-              />
-              {hasLinkedIn && (
-                <KpiCard
-                  label="ROAS LinkedIn"
-                  value={liRoasCur != null ? `×${Number(liRoasCur).toFixed(2)}` : '—'}
-                  delta={liRoasDelta2}
-                  color="linkedin"
-                  icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>}
-                />
-              )}
-            </section>
+                {/* Ligne ROAS */}
+                <section className={styles.kpiGrid}>
+                  <KpiCard
+                    label="ROAS Total"
+                    value={totalRoasCur != null ? `×${totalRoasCur.toFixed(2)}` : '—'}
+                    delta={totalRoasDelta}
+                    color="neutral"
+                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
+                  />
+                  <KpiCard
+                    label="ROAS Google"
+                    value={googleRoasCur != null ? `×${googleRoasCur.toFixed(2)}` : '—'}
+                    delta={googleRoasDelta}
+                    color="info"
+                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"/></svg>}
+                  />
+                  <KpiCard
+                    label="ROAS Meta"
+                    value={metaRoasCur != null ? `×${metaRoasCur.toFixed(2)}` : '—'}
+                    delta={metaRoasDelta2}
+                    color="accent"
+                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>}
+                  />
+                  {hasLinkedIn && (
+                    <KpiCard
+                      label="ROAS LinkedIn"
+                      value={liRoasCur != null ? `×${Number(liRoasCur).toFixed(2)}` : '—'}
+                      delta={liRoasDelta2}
+                      color="linkedin"
+                      icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>}
+                    />
+                  )}
+                </section>
 
-            <AnalysisBlock analyses={aiAnalysis || []} />
+                <AnalysisBlock analyses={aiAnalysis || []} />
+              </>
+            )}
           </>
         )}
 
