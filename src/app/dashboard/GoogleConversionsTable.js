@@ -16,6 +16,7 @@ export default function GoogleConversionsTable({ rows }) {
       columns={COLUMNS}
       rows={rows}
       emptyMessage="Aucune donnée de conversions ce mois"
+      maxHeight="480px"
     />
   );
 }
