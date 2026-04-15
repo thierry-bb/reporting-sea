@@ -171,7 +171,7 @@ export default async function DashboardPage({ searchParams }) {
       : supabase.from(`${tablePrefix}ga4_overview`).select('report_month').eq('client_id', currentClient.id).order('report_month', { ascending: false }).limit(24),
     linkedInOnly ? Promise.resolve({ data: [] })   : supabase.from(`${tablePrefix}google_ads_conversions_monthly`).select('campaign_name, conversion_name, conversions').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('conversions', { ascending: false }),
     linkedInOnly ? Promise.resolve({ data: [] })   : supabase.from(`${tablePrefix}meta_actions`).select('action_type, action_value').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('action_value', { ascending: false }),
-    linkedInOnly ? Promise.resolve({ data: [] })   : supabase.from(`${tablePrefix}ai_analyses`).select('platform, analysis_json').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
+    linkedInOnly ? Promise.resolve({ data: null })  : supabase.from(`${tablePrefix}ai_analyses`).select('summary').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
     linkedInOnly ? Promise.resolve({ data: [] })   : supabase.from(`${tablePrefix}meta_insights`).select('breakdown_type, breakdown_value, impressions, percentage').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
     hasLinkedIn
       ? supabase.from(`${tablePrefix}linkedin_ads_overview`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle()
@@ -466,7 +466,7 @@ export default async function DashboardPage({ searchParams }) {
                   )}
                 </section>
 
-                <AnalysisBlock analyses={aiAnalysis || []} />
+                <AnalysisBlock analysis={aiAnalysis} />
               </>
             )}
           </>
@@ -550,44 +550,14 @@ export default async function DashboardPage({ searchParams }) {
   );
 }
 
-const PLATFORM_LABELS = {
-  google_ads: 'Google Ads',
-  meta: 'Meta Ads',
-  ga4: 'GA4',
-  gsc: 'Search Console',
-};
-
-function AnalysisBlock({ analyses }) {
-  if (!analyses || analyses.length === 0) {
-    return (
-      <div className={styles.analysisCard}>
-        <p className={styles.analysisEmpty}>Aucune analyse disponible pour ce mois.</p>
-      </div>
-    );
-  }
-
+function AnalysisBlock({ analysis }) {
   return (
     <div className={styles.analysisCard}>
-      {analyses.map((item) => {
-        const { headline, key_message, summary } = item.analysis_json || {};
-        const platformLabel = PLATFORM_LABELS[item.platform] || item.platform;
-        return (
-          <div key={item.platform} className={styles.analysisSection}>
-            <span className={styles.analysisPlatformBadge}>{platformLabel}</span>
-            {headline && <h3 className={styles.analysisHeadline}>{headline}</h3>}
-            {key_message && (
-              <div className={styles.analysisKeyMessage}>
-                <svg className={styles.analysisIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 8v4M12 16h.01" />
-                </svg>
-                <p>{key_message}</p>
-              </div>
-            )}
-            {summary && <p className={styles.analysisSummary}>{summary}</p>}
-          </div>
-        );
-      })}
+      <h2 className={styles.analysisTitle}>Analyse globale</h2>
+      {analysis?.summary
+        ? <p className={styles.analysisSummary}>{analysis.summary}</p>
+        : <p className={styles.analysisEmpty}>Aucune analyse disponible pour ce mois.</p>
+      }
     </div>
   );
 }
