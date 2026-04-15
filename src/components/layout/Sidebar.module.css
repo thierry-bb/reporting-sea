@@ -203,6 +203,42 @@
   pointer-events: none;
 }
 
+/* Keep sidebar dark in light theme */
+:global([data-theme="light"]) .sidebar {
+  background: rgba(43, 44, 45, 0.97);
+  border-right-color: rgba(255, 255, 255, 0.08);
+}
+
+:global([data-theme="light"]) .navItem {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+:global([data-theme="light"]) .navItem:hover {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+:global([data-theme="light"]) .navSection {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+:global([data-theme="light"]) .collapseBtn {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+:global([data-theme="light"]) .collapseBtn:hover {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+:global([data-theme="light"]) .footer {
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+:global([data-theme="light"]) .logo {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
 /* Mobile overlay */
 .overlay {
   display: none;

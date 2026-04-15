@@ -5,6 +5,7 @@ import { useCallback } from 'react';
 import { normalizeMonth, formatMonth } from '@/lib/formatters';
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser';
 import TabBar from '@/components/dashboard/TabBar';
+import ThemeToggle from '@/components/ui/ThemeToggle';
 import styles from './Header.module.css';
 
 export default function Header({ clients = [], monthsList = [], pageTitle = 'Dashboard', activeTab = 'overview', role = 'agency', tabs }) {
@@ -47,7 +48,7 @@ export default function Header({ clients = [], monthsList = [], pageTitle = 'Das
               value={currentClient}
               onChange={(e) => updateParam('client', e.target.value)}
               style={{
-                background: 'var(--color-glass)',
+                background: 'var(--color-surface-solid)',
                 border: '1px solid var(--color-border)',
                 borderRadius: 'var(--radius-sm)',
                 color: 'var(--color-text)',
@@ -73,7 +74,7 @@ export default function Header({ clients = [], monthsList = [], pageTitle = 'Das
             value={currentMonth}
             onChange={(e) => updateParam('month', e.target.value)}
             style={{
-              background: 'var(--color-glass)',
+              background: 'var(--color-surface-solid)',
               border: '1px solid var(--color-border)',
               borderRadius: 'var(--radius-sm)',
               color: 'var(--color-text)',
@@ -96,6 +97,7 @@ export default function Header({ clients = [], monthsList = [], pageTitle = 'Das
       </div>
 
       <div className={styles.right}>
+        <ThemeToggle />
         <div className={styles.badge}>
           <div className={styles.dot} />
           Live
