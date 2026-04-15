@@ -108,7 +108,7 @@ function InsightPie({ title, data }) {
             </Pie>
             <Tooltip content={<CustomTooltip />} />
             <Legend
-              formatter={(v) => <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>{v}</span>}
+              formatter={(v) => <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{v}</span>}
             />
           </PieChart>
         </ResponsiveContainer>

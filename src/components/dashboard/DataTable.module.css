@@ -139,6 +139,20 @@
   100% { background-position: -200% 0; }
 }
 
+/* Light theme overrides */
+:global([data-theme="light"]) .title {
+  color: var(--color-text);
+}
+
+:global([data-theme="light"]) .table thead th {
+  background: rgba(220, 222, 226, 0.95);
+  color: var(--color-text-muted);
+}
+
+:global([data-theme="light"]) .table tbody tr:nth-child(even) {
+  background: rgba(0, 0, 0, 0.02);
+}
+
 @media print {
   .table thead {
     position: static;
