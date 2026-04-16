@@ -129,16 +129,16 @@ export default async function PrintPage({ searchParams }) {
         }
         /* Titres de sections */
         [data-print-title] {
-          color: #ffffff !important;
+          color: #1a1a1a !important;
         }
         /* Labels KPI */
         [data-print-label] {
-          color: #cccccc !important;
+          color: #555555 !important;
         }
         /* En-têtes colonnes table */
         [data-print-th] {
-          color: #cccccc !important;
-          background: #1f2022 !important;
+          color: #555555 !important;
+          background: #dde0e5 !important;
         }
         table thead {
           position: static !important;

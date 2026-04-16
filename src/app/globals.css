@@ -179,7 +179,7 @@ img, svg {
   }
 
   body {
-    background: #1F2022 !important;
+    background: #ffffff !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -215,14 +215,14 @@ img, svg {
 
   /* Forcer la visibilité des éléments clés dans le PDF */
   [data-print-label] {
-    color: rgba(255, 255, 255, 0.85) !important;
+    color: #555555 !important;
     visibility: visible !important;
     opacity: 1 !important;
   }
 
   [data-print-th] {
-    color: rgba(255, 255, 255, 0.85) !important;
-    background: rgb(31, 32, 34) !important;
+    color: #555555 !important;
+    background: #dde0e5 !important;
     visibility: visible !important;
     opacity: 1 !important;
   }
