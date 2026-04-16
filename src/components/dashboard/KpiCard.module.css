@@ -170,12 +170,12 @@
 
 @media print {
   .label {
-    color: rgba(255, 255, 255, 0.75) !important;
+    color: #555555 !important;
   }
   .deltaLabel {
-    color: rgba(255, 255, 255, 0.60) !important;
+    color: #888888 !important;
   }
   .value {
-    color: #ffffff !important;
+    color: #1a1a1a !important;
   }
 }

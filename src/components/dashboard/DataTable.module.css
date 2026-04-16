@@ -159,19 +159,19 @@
   }
 
   .table thead th {
-    color: rgba(255, 255, 255, 0.70) !important;
-    background: rgba(31, 32, 34, 1) !important;
+    color: #555555 !important;
+    background: #dde0e5 !important;
   }
 
   .table tbody td {
-    color: #ffffff !important;
+    color: #1a1a1a !important;
   }
 
   .title {
-    color: #ffffff !important;
+    color: #1a1a1a !important;
   }
 
   .subtitle {
-    color: rgba(255, 255, 255, 0.70) !important;
+    color: #555555 !important;
   }
 }
