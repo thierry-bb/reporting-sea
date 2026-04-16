@@ -10,7 +10,6 @@ import {
 } from '@/lib/formatters';
 import KpiCard from '@/components/dashboard/KpiCard';
 import ChartContainer from '@/components/dashboard/ChartContainer';
-import SpendTrendChart from '@/app/dashboard/SpendTrendChart';
 import TrafficSourceChart from '@/app/dashboard/TrafficSourceChart';
 import GoogleCampaignsTable from '@/app/dashboard/GoogleCampaignsTable';
 import GoogleConversionsTable from '@/app/dashboard/GoogleConversionsTable';
@@ -94,7 +93,7 @@ export default async function PrintPage({ searchParams }) {
     supabase.from(`${tablePrefix}global_monthly_reporting`).select('report_month, google_spend, meta_spend, total_ads_spend').eq('client_id', currentClient.id).gte('report_month', sixMonthsAgo).lte('report_month', selectedMonth).order('report_month'),
     supabase.from(`${tablePrefix}google_ads_conversions_monthly`).select('campaign_name, conversion_name, conversions').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('conversions', { ascending: false }),
     supabase.from(`${tablePrefix}meta_actions`).select('action_type, action_value').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('action_value', { ascending: false }),
-    supabase.from(`${tablePrefix}ai_analyses`).select('platform, analysis_json').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
+    supabase.from(`${tablePrefix}ai_analyses`).select('summary').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
     supabase.from(`${tablePrefix}meta_insights`).select('breakdown_type, breakdown_value, impressions, percentage').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
     hasLinkedIn
       ? supabase.from(`${tablePrefix}linkedin_ads_overview`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle()
@@ -109,11 +108,25 @@ export default async function PrintPage({ searchParams }) {
   const metaAgg = aggregateMetaStats(metaCampaigns || []);
   const purchases = (metaPurchases || []).reduce((s, a) => s + (parseFloat(a.action_value) || 0), 0);
 
-  const spendDelta = calcDelta(globalCurrent?.total_ads_spend, globalPrev?.total_ads_spend);
-  const googleDelta = calcDelta(globalCurrent?.google_spend, globalPrev?.google_spend);
-  const metaDelta = calcDelta(globalCurrent?.meta_spend, globalPrev?.meta_spend);
-  const sessionsDelta = calcDelta(ga4Current?.sessions, ga4Prev?.sessions);
-  const usersDelta = calcDelta(ga4Current?.total_users, ga4Prev?.total_users);
+  const spendDelta    = calcDelta(globalCurrent?.total_ads_spend, globalPrev?.total_ads_spend);
+  const googleDelta   = calcDelta(globalCurrent?.google_spend,    globalPrev?.google_spend);
+  const metaDelta     = calcDelta(globalCurrent?.meta_spend,      globalPrev?.meta_spend);
+  const sessionsDelta = calcDelta(ga4Current?.sessions,           ga4Prev?.sessions);
+  const usersDelta    = calcDelta(ga4Current?.total_users,        ga4Prev?.total_users);
+
+  // Conversions
+  const metaPurchaseCount = (metaCampaigns || []).reduce((s, c) => s + (Number(c.purchase_count) || 0), 0);
+  const totalConv = (googleAgg.conversions || 0) + metaPurchaseCount + (linkedInOverview?.total_conversions || 0);
+
+  // ROAS
+  const googleConvValue = googleAgg.conversionsValue || 0;
+  const metaConvValue   = metaAgg.value || purchases || 0;
+  const liConvValue     = linkedInOverview?.total_conv_value_chf || 0;
+  const totalSpend      = (globalCurrent?.total_ads_spend || 0) + (hasLinkedIn ? (linkedInOverview?.total_cost_chf || 0) : 0);
+  const googleRoas      = googleAgg.cost > 0        ? googleConvValue / googleAgg.cost : null;
+  const metaRoas        = metaAgg.spend > 0         ? metaConvValue  / metaAgg.spend  : null;
+  const liRoas          = linkedInOverview?.global_roas ?? null;
+  const totalRoas       = totalSpend > 0 ? (googleConvValue + metaConvValue + liConvValue) / totalSpend : null;
 
   return (
     <div className={styles.page}>
@@ -177,18 +190,35 @@ export default async function PrintPage({ searchParams }) {
       {/* ── OVERVIEW ── */}
       <div className={styles.section}>
         <h2 className={styles.sectionTitle}>Vue d'ensemble</h2>
+
+        {/* Ligne Spend */}
         <div className={styles.kpiGrid}>
-          <KpiCard label="Total Ads Spend"  value={formatCurrency(globalCurrent?.total_ads_spend)} delta={spendDelta}   color="neutral" />
-          <KpiCard label="Google Ads Spend" value={formatCurrency(globalCurrent?.google_spend)}    delta={googleDelta}  color="info" />
-          <KpiCard label="Meta Ads Spend"   value={formatCurrency(globalCurrent?.meta_spend)}      delta={metaDelta}    color="accent" />
-          <KpiCard label="Sessions GA4"     value={formatNumber(ga4Current?.sessions)}             delta={sessionsDelta} color="positive" />
+          <KpiCard label="Total Ads Spend"  value={formatCurrency(hasLinkedIn ? totalSpend : globalCurrent?.total_ads_spend)} delta={spendDelta}    color="neutral" />
+          <KpiCard label="Google Ads Spend" value={formatCurrency(globalCurrent?.google_spend)}   delta={googleDelta}   color="info" />
+          <KpiCard label="Meta Ads Spend"   value={formatCurrency(globalCurrent?.meta_spend)}     delta={metaDelta}     color="accent" />
+          {hasLinkedIn
+            ? <KpiCard label="LinkedIn Ads Spend" value={formatCurrency(linkedInOverview?.total_cost_chf)} color="linkedin" />
+            : <KpiCard label="Sessions GA4"       value={formatNumber(ga4Current?.sessions)}      delta={sessionsDelta} color="positive" />
+          }
         </div>
-        <ChartContainer title="Évolution du budget" subtitle="6 derniers mois" height={280}>
-          <SpendTrendChart data={trendData || []} />
-        </ChartContainer>
-        {aiAnalysis && aiAnalysis.length > 0 && (
-          <AnalysisBlock analyses={aiAnalysis} />
-        )}
+
+        {/* Ligne Conversions */}
+        <div className={styles.kpiGrid}>
+          <KpiCard label="Total Conversions"    value={formatNumber(totalConv)}                    color="neutral" />
+          <KpiCard label="Conversions Google"   value={formatNumber(googleAgg.conversions)}        color="info" />
+          <KpiCard label="Conversions Meta"     value={formatNumber(metaPurchaseCount)}            color="accent" />
+          {hasLinkedIn && <KpiCard label="Conversions LinkedIn" value={formatNumber(linkedInOverview?.total_conversions)} color="linkedin" />}
+        </div>
+
+        {/* Ligne ROAS */}
+        <div className={styles.kpiGrid}>
+          <KpiCard label="ROAS Total"    value={totalRoas  != null ? `×${totalRoas.toFixed(2)}`  : '—'} color="neutral" />
+          <KpiCard label="ROAS Google"   value={googleRoas != null ? `×${googleRoas.toFixed(2)}` : '—'} color="info" />
+          <KpiCard label="ROAS Meta"     value={metaRoas   != null ? `×${metaRoas.toFixed(2)}`   : '—'} color="accent" />
+          {hasLinkedIn && <KpiCard label="ROAS LinkedIn" value={liRoas != null ? `×${Number(liRoas).toFixed(2)}` : '—'} color="linkedin" />}
+        </div>
+
+        <PrintAnalysisBlock analysis={aiAnalysis} />
       </div>
 
       {/* ── GOOGLE ADS ── */}
@@ -262,28 +292,12 @@ export default async function PrintPage({ searchParams }) {
   );
 }
 
-const PLATFORM_LABELS = {
-  google_ads: 'Google Ads',
-  meta: 'Meta Ads',
-  ga4: 'GA4',
-  gsc: 'Search Console',
-};
-
-function AnalysisBlock({ analyses }) {
+function PrintAnalysisBlock({ analysis }) {
+  if (!analysis?.summary) return null;
   return (
     <div className={styles.analysisCard}>
-      {analyses.map((item) => {
-        const { headline, key_message, summary } = item.analysis_json || {};
-        const platformLabel = PLATFORM_LABELS[item.platform] || item.platform;
-        return (
-          <div key={item.platform} className={styles.analysisSection}>
-            <span className={styles.analysisBadge}>{platformLabel}</span>
-            {headline && <h3 className={styles.analysisHeadline}>{headline}</h3>}
-            {key_message && <p className={styles.analysisKeyMessage}>{key_message}</p>}
-            {summary && <p className={styles.analysisSummary}>{summary}</p>}
-          </div>
-        );
-      })}
+      <h3 className={styles.analysisHeadline}>Analyse globale</h3>
+      <p className={styles.analysisSummary}>{analysis.summary}</p>
     </div>
   );
 }
