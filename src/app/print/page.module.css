@@ -68,11 +68,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 40px 48px;
+  padding: 24px 40px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  min-height: 160px;
+  min-height: 120px;
 }
 
 .coverLogo {
@@ -126,7 +126,8 @@
 }
 
 /* ── Sections ── */
-.section {
+.section,
+.sectionFirst {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
@@ -243,18 +244,27 @@
   .page {
     padding: 0;
     max-width: 100%;
-    gap: 0;
+    gap: 16pt;
   }
 
   .closeBtn {
     display: none !important;
   }
 
+  /* Cover reste sur la page 1 avec Vue d'ensemble — pas de break-after */
   .cover {
-    break-after: page;
+    break-inside: avoid;
     margin-bottom: 0;
   }
 
+  /* Vue d'ensemble : même page que la cover, break-after pour forcer nouvelle page ensuite */
+  .sectionFirst {
+    gap: 12pt;
+    break-inside: avoid-page;
+    break-after: page;
+  }
+
+  /* Autres sections : chacune commence sur une nouvelle page */
   .section {
     break-before: page;
     gap: 12pt;
@@ -262,17 +272,22 @@
 
   .kpiGrid {
     grid-template-columns: repeat(4, 1fr);
+    break-inside: avoid;
   }
 
   .kpiGrid5 {
     grid-template-columns: repeat(5, 1fr);
+    break-inside: avoid;
   }
 
   .twoCol {
     grid-template-columns: 1fr 1fr;
+    break-inside: avoid;
   }
 
-  .section > * {
+  /* Chaque enfant direct d'une section ne se coupe pas entre pages */
+  .section > *,
+  .sectionFirst > * {
     break-inside: avoid;
   }
 }
