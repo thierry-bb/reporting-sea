@@ -23,6 +23,7 @@ export default function Header({ clients = [], monthsList = [], pageTitle = 'Das
   const currentMonth = searchParams.get('month') || '';
 
   const updateParam = useCallback((key, value) => {
+    window.dispatchEvent(new Event('nav:start'));
     const params = new URLSearchParams(searchParams.toString());
     if (value) {
       params.set(key, value);

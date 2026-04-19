@@ -29,19 +29,6 @@ import styles from './page.module.css';
 
 export const dynamic = 'force-dynamic';
 
-// Clients utilisant des tables dédiées (préfixées)
-const CLIENT_TABLE_PREFIX = {
-  'HEG':     'heg_',
-  'Yneo':    'yneo_',
-  'Ifage':   'ifage_',
-  'Stryker': 'stryker_',
-};
-
-// Clients avec onglet LinkedIn (à la place de GSC)
-const LINKEDIN_CLIENTS = ['HEG', 'Stryker'];
-
-// Clients avec LinkedIn uniquement (pas de Google/Meta/GA4/GSC)
-const LINKEDIN_ONLY_CLIENTS = ['Stryker'];
 
 export default async function DashboardPage({ searchParams }) {
   const params = await searchParams;
@@ -57,7 +44,7 @@ export default async function DashboardPage({ searchParams }) {
   // --- Charger les clients actifs ---
   const { data: clients } = await supabase
     .from('clients')
-    .select('id, client, logo_url, actif, target_cpa_google, max_cpa_google, target_ctr_google, min_ctr_google, target_cpa_meta, max_cpa_meta, target_ctr_meta, min_ctr_meta')
+    .select('id, client, logo_url, actif, target_cpa_google, max_cpa_google, target_ctr_google, min_ctr_google, target_cpa_meta, max_cpa_meta, target_ctr_meta, min_ctr_meta, has_google_ads, has_meta, has_ga4, has_gsc, has_linkedin')
     .eq('actif', true)
     .order('client');
 
@@ -80,35 +67,30 @@ export default async function DashboardPage({ searchParams }) {
   const clientId = role === 'client' ? userClientId : (params.client || clients[0].id);
   const currentClient = clients.find((c) => c.id === clientId) || clients[0];
 
-  // --- Préfixe de tables selon le client ---
-  const tablePrefix = CLIENT_TABLE_PREFIX[currentClient.client] || '';
-  const hasLinkedIn = LINKEDIN_CLIENTS.includes(currentClient.client);
-  const linkedInOnly = LINKEDIN_ONLY_CLIENTS.includes(currentClient.client);
+  // --- Plateformes actives selon le client ---
+  const hasGoogleAds = currentClient.has_google_ads ?? true;
+  const hasMeta      = currentClient.has_meta       ?? true;
+  const hasGA4       = currentClient.has_ga4        ?? true;
+  const hasGSC       = currentClient.has_gsc        ?? true;
+  const hasLinkedIn  = currentClient.has_linkedin   ?? false;
+  const linkedInOnly = hasLinkedIn && !hasGoogleAds && !hasMeta;
 
   // --- Résoudre le mois sélectionné ---
   const rawMonth = params.month;
   const selectedMonth = normalizeMonth(rawMonth) || getPreviousMonth();
   const previousMonth = getMonthOffset(selectedMonth, -1);
 
-  // --- Onglets selon le client ---
-  const validTabs = linkedInOnly
-    ? ['overview', 'linkedin']
-    : ['overview', 'google', 'meta', 'ga4', ...(hasLinkedIn ? ['linkedin'] : ['gsc'])];
+  // --- Onglets selon les plateformes actives ---
+  const tabs = [
+    { id: 'overview', label: 'Overview', color: null },
+    ...(hasGoogleAds ? [{ id: 'google',   label: 'Google Ads',     color: 'blue'   }] : []),
+    ...(hasMeta      ? [{ id: 'meta',     label: 'Meta Ads',       color: 'pink'   }] : []),
+    ...(hasGA4       ? [{ id: 'ga4',      label: 'GA4',            color: 'yellow' }] : []),
+    ...(hasGSC       ? [{ id: 'gsc',      label: 'Search Console', color: null     }] : []),
+    ...(hasLinkedIn  ? [{ id: 'linkedin', label: 'LinkedIn',       color: 'green'  }] : []),
+  ];
+  const validTabs = tabs.map((t) => t.id);
   const activeTab = validTabs.includes(params.tab) ? params.tab : 'overview';
-
-  const tabs = linkedInOnly
-    ? [
-        { id: 'overview',  label: 'Overview',  color: null },
-        { id: 'linkedin',  label: 'LinkedIn',  color: 'green' },
-      ]
-    : [
-        { id: 'overview', label: 'Overview',       color: null },
-        { id: 'google',   label: 'Google Ads',     color: 'blue' },
-        { id: 'meta',     label: 'Meta Ads',       color: 'pink' },
-        { id: 'ga4',      label: 'GA4',            color: 'yellow' },
-        ...(!hasLinkedIn ? [{ id: 'gsc', label: 'Search Console', color: null }] : []),
-        ...(hasLinkedIn   ? [{ id: 'linkedin', label: 'LinkedIn', color: 'green' }] : []),
-      ];
 
   // --- Si params manquants, rediriger avec les bons params ---
   if (!params.client || !params.month) {
@@ -116,7 +98,7 @@ export default async function DashboardPage({ searchParams }) {
 
     // Pour un client : chercher le mois le plus récent avec des données
     if (role === 'client' && !params.month) {
-      const monthTable = linkedInOnly ? `${tablePrefix}linkedin_ads_overview` : `${tablePrefix}global_monthly_reporting`;
+      const monthTable = linkedInOnly ? 'linkedin_ads_overview' : 'global_monthly_reporting';
       const { data: latestRow } = await supabase
         .from(monthTable)
         .select('report_month')
@@ -156,37 +138,29 @@ export default async function DashboardPage({ searchParams }) {
     { data: linkedInOverviewPrev },
     { data: linkedInEvents },
   ] = await Promise.all([
-    linkedInOnly ? Promise.resolve({ data: null }) : supabase.from(`${tablePrefix}global_monthly_reporting`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
-    linkedInOnly ? Promise.resolve({ data: null }) : supabase.from(`${tablePrefix}global_monthly_reporting`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle(),
-    linkedInOnly ? Promise.resolve({ data: null }) : supabase.from(`${tablePrefix}ga4_overview`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
-    linkedInOnly ? Promise.resolve({ data: null }) : supabase.from(`${tablePrefix}ga4_overview`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle(),
-    linkedInOnly ? Promise.resolve({ data: [] })   : supabase.from(`${tablePrefix}google_ads_monthly_stats`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
-    linkedInOnly ? Promise.resolve({ data: [] })   : supabase.from(`${tablePrefix}google_ads_monthly_stats`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth),
-    linkedInOnly ? Promise.resolve({ data: [] })   : supabase.from(`${tablePrefix}meta_campaigns`).select('campaign_name, platform, impressions, reach, clicks, page_likes, spend, ctr_total, purchase_count, purchase_value').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
-    linkedInOnly ? Promise.resolve({ data: [] })   : supabase.from(`${tablePrefix}gsc_top_queries`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('rank').limit(20),
-    linkedInOnly ? Promise.resolve({ data: [] })   : supabase.from(`${tablePrefix}ga4_traffic_sources`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
-    linkedInOnly ? Promise.resolve({ data: [] })   : supabase.from(`${tablePrefix}ga4_top_pages`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('rank').limit(10),
+    !linkedInOnly ? supabaseAuth.from('global_monthly_reporting').select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle() : Promise.resolve({ data: null }),
+    !linkedInOnly ? supabaseAuth.from('global_monthly_reporting').select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle() : Promise.resolve({ data: null }),
+    hasGA4 ? supabaseAuth.from('ga4_overview').select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle() : Promise.resolve({ data: null }),
+    hasGA4 ? supabaseAuth.from('ga4_overview').select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle() : Promise.resolve({ data: null }),
+    hasGoogleAds ? supabaseAuth.from('google_ads_monthly_stats').select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth) : Promise.resolve({ data: [] }),
+    hasGoogleAds ? supabaseAuth.from('google_ads_monthly_stats').select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth) : Promise.resolve({ data: [] }),
+    hasMeta ? supabaseAuth.from('meta_campaigns').select('campaign_name, platform, impressions, reach, clicks, page_likes, spend, ctr_total, purchase_count, purchase_value').eq('client_id', currentClient.id).eq('report_month', selectedMonth) : Promise.resolve({ data: [] }),
+    hasGSC  ? supabaseAuth.from('gsc_top_queries').select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('rank').limit(20) : Promise.resolve({ data: [] }),
+    hasGA4  ? supabaseAuth.from('ga4_traffic_sources').select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth) : Promise.resolve({ data: [] }),
+    hasGA4  ? supabaseAuth.from('ga4_top_pages').select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('rank').limit(10) : Promise.resolve({ data: [] }),
     linkedInOnly
-      ? supabase.from(`${tablePrefix}linkedin_ads_overview`).select('report_month').eq('client_id', currentClient.id).order('report_month', { ascending: false }).limit(24)
-      : supabase.from(`${tablePrefix}ga4_overview`).select('report_month').eq('client_id', currentClient.id).order('report_month', { ascending: false }).limit(24),
-    linkedInOnly ? Promise.resolve({ data: [] })   : supabase.from(`${tablePrefix}google_ads_conversions_monthly`).select('campaign_name, conversion_name, conversions').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('conversions', { ascending: false }),
-    linkedInOnly ? Promise.resolve({ data: [] })   : supabase.from(`${tablePrefix}meta_actions`).select('action_type, action_value').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('action_value', { ascending: false }),
-    linkedInOnly ? Promise.resolve({ data: null })  : supabase.from(`${tablePrefix}ai_analyses`).select('summary').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
-    linkedInOnly ? Promise.resolve({ data: [] })   : supabase.from(`${tablePrefix}meta_insights`).select('breakdown_type, breakdown_value, impressions, percentage').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
-    hasLinkedIn
-      ? supabase.from(`${tablePrefix}linkedin_ads_overview`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle()
-      : Promise.resolve({ data: null }),
-    hasLinkedIn
-      ? supabase.from(`${tablePrefix}linkedin_ads_campaigns`).select('campaign_name, campaign_id, status, objective, impressions, clicks, conversions, cost_chf, conv_value_chf').eq('client_id', currentClient.id).eq('report_month', selectedMonth)
-      : Promise.resolve({ data: [] }),
-    supabase.from(`${tablePrefix}ga4_events_report`).select('event_name, event_count, total_users').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('event_count', { ascending: false }),
-    supabase.from(`${tablePrefix}meta_campaigns`).select('impressions, reach, clicks, page_likes, spend, platform, purchase_count, purchase_value').eq('client_id', currentClient.id).eq('report_month', previousMonth),
-    hasLinkedIn
-      ? supabase.from(`${tablePrefix}linkedin_ads_overview`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle()
-      : Promise.resolve({ data: null }),
-    hasLinkedIn
-      ? supabase.from(`${tablePrefix}linkedin_ads_events`).select('conversion_name, conversions').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('conversions', { ascending: false })
-      : Promise.resolve({ data: [] }),
+      ? supabaseAuth.from('linkedin_ads_overview').select('report_month').eq('client_id', currentClient.id).order('report_month', { ascending: false }).limit(24)
+      : supabaseAuth.from('ga4_overview').select('report_month').eq('client_id', currentClient.id).order('report_month', { ascending: false }).limit(24),
+    hasGoogleAds ? supabaseAuth.from('google_ads_conversions_monthly').select('campaign_name, conversion_name, conversions').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('conversions', { ascending: false }) : Promise.resolve({ data: [] }),
+    hasMeta ? supabaseAuth.from('meta_actions').select('action_type, action_value').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('action_value', { ascending: false }) : Promise.resolve({ data: [] }),
+    supabaseAuth.from('ai_analyses').select('summary').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
+    hasMeta ? supabaseAuth.from('meta_insights').select('breakdown_type, breakdown_value, impressions, percentage').eq('client_id', currentClient.id).eq('report_month', selectedMonth) : Promise.resolve({ data: [] }),
+    hasLinkedIn ? supabaseAuth.from('linkedin_ads_overview').select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle() : Promise.resolve({ data: null }),
+    hasLinkedIn ? supabaseAuth.from('linkedin_ads_campaigns').select('campaign_name, campaign_id, status, objective, impressions, clicks, conversions, cost_chf, conv_value_chf').eq('client_id', currentClient.id).eq('report_month', selectedMonth) : Promise.resolve({ data: [] }),
+    hasGA4  ? supabaseAuth.from('ga4_events_report').select('event_name, event_count, total_users').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('event_count', { ascending: false }) : Promise.resolve({ data: [] }),
+    hasMeta ? supabaseAuth.from('meta_campaigns').select('impressions, reach, clicks, page_likes, spend, platform, purchase_count, purchase_value').eq('client_id', currentClient.id).eq('report_month', previousMonth) : Promise.resolve({ data: [] }),
+    hasLinkedIn ? supabaseAuth.from('linkedin_ads_overview').select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle() : Promise.resolve({ data: null }),
+    hasLinkedIn ? supabaseAuth.from('linkedin_ads_events').select('conversion_name, conversions').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('conversions', { ascending: false }) : Promise.resolve({ data: [] }),
   ]);
 
   // --- Calculs agrégés ---

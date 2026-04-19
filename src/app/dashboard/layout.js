@@ -1,5 +1,7 @@
+import { Suspense } from 'react';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
 import Sidebar from '@/components/layout/Sidebar';
+import NavigationProgress from '@/components/layout/NavigationProgress';
 
 export default async function DashboardLayout({ children }) {
   const supabase = await createSupabaseServerClient();
@@ -8,6 +10,9 @@ export default async function DashboardLayout({ children }) {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
+      <Suspense fallback={null}>
+        <NavigationProgress />
+      </Suspense>
       <Sidebar role={role} />
       <div
         style={{

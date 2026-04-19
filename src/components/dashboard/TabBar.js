@@ -18,6 +18,7 @@ export default function TabBar({ activeTab = 'overview', tabs }) {
   const searchParams = useSearchParams();
 
   function handleTab(tabId) {
+    window.dispatchEvent(new Event('nav:start'));
     const params = new URLSearchParams(searchParams.toString());
     params.set('tab', tabId);
     router.push(`${pathname}?${params.toString()}`);

@@ -4,10 +4,11 @@ import DataTable from '@/components/dashboard/DataTable';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
 
 const STATUS_COLORS = {
-  ACTIVE:   '#22c55e',
-  PAUSED:   '#f59e0b',
-  ARCHIVED: 'rgba(255,255,255,0.3)',
-  DRAFT:    'rgba(255,255,255,0.3)',
+  ACTIVE:    '#22c55e',
+  PAUSED:    '#f59e0b',
+  COMPLETED: '#888888',
+  ARCHIVED:  '#888888',
+  DRAFT:     '#888888',
 };
 
 const COLUMNS = [
@@ -17,7 +18,7 @@ const COLUMNS = [
     key: 'status',
     label: 'Statut',
     render: (v) => (
-      <span style={{ color: STATUS_COLORS[v] || 'rgba(255,255,255,0.5)', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+      <span style={{ color: STATUS_COLORS[v] || '#888888', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
         {v || '—'}
       </span>
     ),

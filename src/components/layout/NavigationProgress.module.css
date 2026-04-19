@@ -1,0 +1,24 @@
+.bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 9999;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-accent) 30%,
+    var(--color-accent-hover) 50%,
+    var(--color-accent) 70%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: progress-sweep 1.2s ease-in-out infinite;
+  box-shadow: var(--shadow-glow-pink);
+}
+
+@keyframes progress-sweep {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

@@ -34,6 +34,7 @@ export default function GscQueriesTable({ rows, subtitle }) {
       columns={COLUMNS}
       rows={rows}
       emptyMessage="Aucune donnée GSC ce mois"
+      maxHeight="480px"
     />
   );
 }

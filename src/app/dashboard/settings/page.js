@@ -1,5 +1,6 @@
 import supabase from '@/lib/supabase';
 import Header from '@/components/layout/Header';
+import ClientToggles from './ClientToggles';
 import { Suspense } from 'react';
 import styles from './settings.module.css';
 
@@ -31,11 +32,25 @@ export default async function SettingsPage({ searchParams }) {
         {currentClient && (
           <div className={styles.card}>
             <h3 className={styles.cardTitle}>{currentClient.client}</h3>
-            <div className={styles.grid}>
+            <div className={styles.stack}>
               <Field label="Site web" value={currentClient.site_url} />
               <Field label="Stratégie" value={currentClient.strategie} />
               <Field label="Statut" value={currentClient.actif ? 'Actif' : 'Inactif'} />
             </div>
+
+            <div className={styles.divider} />
+
+            <h4 className={styles.subTitle}>Intégrations actives</h4>
+            <ClientToggles
+              clientId={currentClient.id}
+              initialValues={{
+                has_google_ads: currentClient.has_google_ads ?? false,
+                has_meta:       currentClient.has_meta       ?? false,
+                has_linkedin:   currentClient.has_linkedin   ?? false,
+                has_ga4:        currentClient.has_ga4        ?? false,
+                has_gsc:        currentClient.has_gsc        ?? false,
+              }}
+            />
 
             <div className={styles.divider} />
 

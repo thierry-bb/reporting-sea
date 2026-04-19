@@ -67,6 +67,7 @@ export default function Sidebar({ role }) {
               href={item.href}
               className={`${styles.navItem} ${isActive ? styles.active : ''}`}
               title={collapsed ? item.label : undefined}
+              onClick={() => window.dispatchEvent(new Event('nav:start'))}
             >
               <span className={styles.navIcon}>{item.icon}</span>
               <span className={styles.navLabel}>{item.label}</span>

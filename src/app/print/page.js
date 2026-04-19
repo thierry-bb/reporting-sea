@@ -24,13 +24,6 @@ import styles from './page.module.css';
 
 export const dynamic = 'force-dynamic';
 
-const CLIENT_TABLE_PREFIX = {
-  'HEG':   'heg_',
-  'Yneo':  'yneo_',
-  'Ifage': 'ifage_',
-};
-
-const LINKEDIN_CLIENTS = ['HEG'];
 
 export default async function PrintPage({ searchParams }) {
   const params = await searchParams;
@@ -43,7 +36,7 @@ export default async function PrintPage({ searchParams }) {
   // Client
   const { data: clients } = await supabase
     .from('clients')
-    .select('id, client, logo_url, target_cpa_google, max_cpa_google, target_cpa_meta, max_cpa_meta')
+    .select('id, client, logo_url, target_cpa_google, max_cpa_google, target_cpa_meta, max_cpa_meta, has_google_ads, has_meta, has_ga4, has_gsc, has_linkedin')
     .eq('actif', true)
     .order('client');
 
@@ -52,8 +45,11 @@ export default async function PrintPage({ searchParams }) {
   const clientId = params.client || clients[0].id;
   const currentClient = clients.find((c) => c.id === clientId) || clients[0];
 
-  const tablePrefix = CLIENT_TABLE_PREFIX[currentClient.client] || '';
-  const hasLinkedIn = LINKEDIN_CLIENTS.includes(currentClient.client);
+  const hasGoogleAds = currentClient.has_google_ads ?? true;
+  const hasMeta      = currentClient.has_meta       ?? true;
+  const hasGA4       = currentClient.has_ga4        ?? true;
+  const hasGSC       = currentClient.has_gsc        ?? true;
+  const hasLinkedIn  = currentClient.has_linkedin   ?? false;
 
   // Mois
   const selectedMonth = normalizeMonth(params.month) || getPreviousMonth();
@@ -83,32 +79,26 @@ export default async function PrintPage({ searchParams }) {
     { data: metaCampaignsPrev },
     { data: linkedInOverviewPrev },
   ] = await Promise.all([
-    supabase.from(`${tablePrefix}global_monthly_reporting`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
-    supabase.from(`${tablePrefix}global_monthly_reporting`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle(),
-    supabase.from(`${tablePrefix}ga4_overview`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
-    supabase.from(`${tablePrefix}ga4_overview`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle(),
-    supabase.from(`${tablePrefix}google_ads_monthly_stats`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
-    supabase.from(`${tablePrefix}meta_campaigns`).select('platform, impressions, reach, clicks, page_likes, spend, purchase_value, purchase_count').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
-    supabase.from(`${tablePrefix}meta_actions`).select('action_value').eq('client_id', currentClient.id).eq('report_month', selectedMonth).eq('action_type', 'purchase'),
-    supabase.from(`${tablePrefix}gsc_top_queries`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('rank').limit(20),
-    supabase.from(`${tablePrefix}ga4_traffic_sources`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
-    supabase.from(`${tablePrefix}ga4_top_pages`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('rank').limit(10),
-    supabase.from(`${tablePrefix}global_monthly_reporting`).select('report_month, google_spend, meta_spend, total_ads_spend').eq('client_id', currentClient.id).gte('report_month', sixMonthsAgo).lte('report_month', selectedMonth).order('report_month'),
-    supabase.from(`${tablePrefix}google_ads_conversions_monthly`).select('campaign_name, conversion_name, conversions').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('conversions', { ascending: false }),
-    supabase.from(`${tablePrefix}meta_actions`).select('action_type, action_value').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('action_value', { ascending: false }),
-    supabase.from(`${tablePrefix}ai_analyses`).select('summary').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
-    supabase.from(`${tablePrefix}meta_insights`).select('breakdown_type, breakdown_value, impressions, percentage').eq('client_id', currentClient.id).eq('report_month', selectedMonth),
-    hasLinkedIn
-      ? supabase.from(`${tablePrefix}linkedin_ads_overview`).select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle()
-      : Promise.resolve({ data: null }),
-    hasLinkedIn
-      ? supabase.from(`${tablePrefix}linkedin_ads_campaigns`).select('campaign_name, campaign_id, status, objective, impressions, clicks, conversions, cost_chf, conv_value_chf').eq('client_id', currentClient.id).eq('report_month', selectedMonth)
-      : Promise.resolve({ data: [] }),
-    supabase.from(`${tablePrefix}google_ads_monthly_stats`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth),
-    supabase.from(`${tablePrefix}meta_campaigns`).select('platform, impressions, reach, clicks, page_likes, spend, purchase_value, purchase_count').eq('client_id', currentClient.id).eq('report_month', previousMonth),
-    hasLinkedIn
-      ? supabase.from(`${tablePrefix}linkedin_ads_overview`).select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle()
-      : Promise.resolve({ data: null }),
+    supabaseAuth.from('global_monthly_reporting').select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
+    supabaseAuth.from('global_monthly_reporting').select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle(),
+    hasGA4 ? supabaseAuth.from('ga4_overview').select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle() : Promise.resolve({ data: null }),
+    hasGA4 ? supabaseAuth.from('ga4_overview').select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle() : Promise.resolve({ data: null }),
+    hasGoogleAds ? supabaseAuth.from('google_ads_monthly_stats').select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth) : Promise.resolve({ data: [] }),
+    hasMeta ? supabaseAuth.from('meta_campaigns').select('platform, impressions, reach, clicks, page_likes, spend, purchase_value, purchase_count').eq('client_id', currentClient.id).eq('report_month', selectedMonth) : Promise.resolve({ data: [] }),
+    hasMeta ? supabaseAuth.from('meta_actions').select('action_value').eq('client_id', currentClient.id).eq('report_month', selectedMonth).eq('action_type', 'purchase') : Promise.resolve({ data: [] }),
+    hasGSC  ? supabaseAuth.from('gsc_top_queries').select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('rank').limit(20) : Promise.resolve({ data: [] }),
+    hasGA4  ? supabaseAuth.from('ga4_traffic_sources').select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth) : Promise.resolve({ data: [] }),
+    hasGA4  ? supabaseAuth.from('ga4_top_pages').select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('rank').limit(10) : Promise.resolve({ data: [] }),
+    supabaseAuth.from('global_monthly_reporting').select('report_month, google_spend, meta_spend, total_ads_spend').eq('client_id', currentClient.id).gte('report_month', sixMonthsAgo).lte('report_month', selectedMonth).order('report_month'),
+    hasGoogleAds ? supabaseAuth.from('google_ads_conversions_monthly').select('campaign_name, conversion_name, conversions').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('conversions', { ascending: false }) : Promise.resolve({ data: [] }),
+    hasMeta ? supabaseAuth.from('meta_actions').select('action_type, action_value').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('action_value', { ascending: false }) : Promise.resolve({ data: [] }),
+    supabaseAuth.from('ai_analyses').select('summary').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
+    hasMeta ? supabaseAuth.from('meta_insights').select('breakdown_type, breakdown_value, impressions, percentage').eq('client_id', currentClient.id).eq('report_month', selectedMonth) : Promise.resolve({ data: [] }),
+    hasLinkedIn ? supabaseAuth.from('linkedin_ads_overview').select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle() : Promise.resolve({ data: null }),
+    hasLinkedIn ? supabaseAuth.from('linkedin_ads_campaigns').select('campaign_name, campaign_id, status, objective, impressions, clicks, conversions, cost_chf, conv_value_chf').eq('client_id', currentClient.id).eq('report_month', selectedMonth) : Promise.resolve({ data: [] }),
+    hasGoogleAds ? supabaseAuth.from('google_ads_monthly_stats').select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth) : Promise.resolve({ data: [] }),
+    hasMeta ? supabaseAuth.from('meta_campaigns').select('platform, impressions, reach, clicks, page_likes, spend, purchase_value, purchase_count').eq('client_id', currentClient.id).eq('report_month', previousMonth) : Promise.resolve({ data: [] }),
+    hasLinkedIn ? supabaseAuth.from('linkedin_ads_overview').select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle() : Promise.resolve({ data: null }),
   ]);
 
   // Calculs — mois courant
@@ -268,54 +258,60 @@ export default async function PrintPage({ searchParams }) {
       </div>
 
       {/* ── GOOGLE ADS ── */}
-      <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>Google Ads</h2>
-        <div className={styles.kpiGrid5}>
-          <KpiCard label="Spend"        value={formatCurrency(globalCurrent?.google_spend)} delta={googleDelta}      color="info" />
-          <KpiCard label="Clics"        value={formatNumber(googleAgg.clicks)}              delta={googleClicksDelta} color="info" />
-          <KpiCard label="Impressions"  value={formatNumber(googleAgg.impressions)}         delta={googleImpDelta}    color="info" />
-          <KpiCard label="Conversions"  value={formatNumber(googleAgg.conversions)}         delta={googleConvDelta}   color="info" />
-          <KpiCard label="Coût / conv." value={formatCurrency(googleAgg.cpa)}               delta={googleCPADelta}    color="info" invertDelta />
+      {hasGoogleAds && (
+        <div className={styles.section}>
+          <h2 className={styles.sectionTitle}>Google Ads</h2>
+          <div className={styles.kpiGrid5}>
+            <KpiCard label="Spend"        value={formatCurrency(globalCurrent?.google_spend)} delta={googleDelta}      color="info" />
+            <KpiCard label="Clics"        value={formatNumber(googleAgg.clicks)}              delta={googleClicksDelta} color="info" />
+            <KpiCard label="Impressions"  value={formatNumber(googleAgg.impressions)}         delta={googleImpDelta}    color="info" />
+            <KpiCard label="Conversions"  value={formatNumber(googleAgg.conversions)}         delta={googleConvDelta}   color="info" />
+            <KpiCard label="Coût / conv." value={formatCurrency(googleAgg.cpa)}               delta={googleCPADelta}    color="info" invertDelta />
+          </div>
+          <GoogleCampaignsTable rows={googleStats || []} />
+          <GoogleConversionsTable rows={googleConversions || []} />
         </div>
-        <GoogleCampaignsTable rows={googleStats || []} />
-        <GoogleConversionsTable rows={googleConversions || []} />
-      </div>
+      )}
 
       {/* ── META ADS ── */}
-      <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>Meta Ads</h2>
-        <MetaPlatformTable rows={metaCampaigns || []} />
-        <MetaInsightsCharts rows={metaInsights || []} />
-        <MetaActionsTable rows={metaActions || []} />
-      </div>
+      {hasMeta && (
+        <div className={styles.section}>
+          <h2 className={styles.sectionTitle}>Meta Ads</h2>
+          <MetaPlatformTable rows={metaCampaigns || []} />
+          <MetaInsightsCharts rows={metaInsights || []} />
+          <MetaActionsTable rows={metaActions || []} />
+        </div>
+      )}
 
       {/* ── GA4 ── */}
-      <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>GA4</h2>
-        <div className={styles.kpiGrid5}>
-          <KpiCard label="Sessions"            value={formatNumber(ga4Current?.sessions)}          delta={sessionsDelta}        color="positive" />
-          <KpiCard label="Sessions engagées"   value={formatNumber(ga4Current?.engaged_sessions)}  delta={engagedSessionsDelta} color="positive" />
-          <KpiCard label="Taux d'engagement"   value={ga4Current?.engagement_rate != null ? formatPercent(ga4Current.engagement_rate) : '—'} delta={engagementRateDelta} color="positive" />
-          <KpiCard label="Nouveaux utilis."    value={formatNumber(ga4Current?.new_users)}         delta={newUsersDelta}        color="positive" />
-          <KpiCard label="Total utilisateurs"  value={formatNumber(ga4Current?.total_users)}       delta={usersDelta}           color="positive" />
+      {hasGA4 && (
+        <div className={styles.section}>
+          <h2 className={styles.sectionTitle}>GA4</h2>
+          <div className={styles.kpiGrid5}>
+            <KpiCard label="Sessions"            value={formatNumber(ga4Current?.sessions)}          delta={sessionsDelta}        color="positive" />
+            <KpiCard label="Sessions engagées"   value={formatNumber(ga4Current?.engaged_sessions)}  delta={engagedSessionsDelta} color="positive" />
+            <KpiCard label="Taux d'engagement"   value={ga4Current?.engagement_rate != null ? formatPercent(ga4Current.engagement_rate) : '—'} delta={engagementRateDelta} color="positive" />
+            <KpiCard label="Nouveaux utilis."    value={formatNumber(ga4Current?.new_users)}         delta={newUsersDelta}        color="positive" />
+            <KpiCard label="Total utilisateurs"  value={formatNumber(ga4Current?.total_users)}       delta={usersDelta}           color="positive" />
+          </div>
+          <div className={styles.twoCol}>
+            <ChartContainer title="Sources de trafic" height={280}>
+              <TrafficSourceChart data={trafficSources || []} />
+            </ChartContainer>
+            <TopPagesTable rows={topPages || []} />
+          </div>
         </div>
-        <div className={styles.twoCol}>
-          <ChartContainer title="Sources de trafic" height={280}>
-            <TrafficSourceChart data={trafficSources || []} />
-          </ChartContainer>
-          <TopPagesTable rows={topPages || []} />
-        </div>
-      </div>
+      )}
 
-      {/* ── GSC (si pas HEG) ── */}
-      {!hasLinkedIn && gscQueries && gscQueries.length > 0 && (
+      {/* ── GSC ── */}
+      {hasGSC && gscQueries && gscQueries.length > 0 && (
         <div className={styles.section}>
           <h2 className={styles.sectionTitle}>Search Console</h2>
           <GscQueriesTable rows={gscQueries} subtitle={`${gscQueries.length} requêtes — ${formatMonth(selectedMonth)}`} />
         </div>
       )}
 
-      {/* ── LINKEDIN (HEG uniquement) ── */}
+      {/* ── LINKEDIN ── */}
       {hasLinkedIn && (
         <div className={styles.section}>
           <h2 className={styles.sectionTitle}>LinkedIn</h2>
