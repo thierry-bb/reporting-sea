@@ -47,7 +47,13 @@ export default function Header({ clients = [], monthsList = [], pageTitle = 'Das
             <span className={styles.label}>Client</span>
             <select
               value={currentClient}
-              onChange={(e) => updateParam('client', e.target.value)}
+              onChange={(e) => {
+                if (e.target.value === '__new__') {
+                  window.open('https://tally.so/r/0QjPBA', '_blank');
+                } else {
+                  updateParam('client', e.target.value);
+                }
+              }}
               style={{
                 background: 'var(--color-surface-solid)',
                 border: '1px solid var(--color-border)',
@@ -64,6 +70,9 @@ export default function Header({ clients = [], monthsList = [], pageTitle = 'Das
                   {c.client}
                 </option>
               ))}
+              <option value="__new__" style={{ background: 'var(--color-surface-solid)', color: 'var(--color-accent)' }}>
+                + Ajout d&apos;un nouveau client
+              </option>
             </select>
           </div>
         )}
