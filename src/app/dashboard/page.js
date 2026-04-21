@@ -24,6 +24,7 @@ import GscQueriesTable from './GscQueriesTable';
 import LinkedInCampaignsTable from './LinkedInCampaignsTable';
 import LinkedInEventsTable from './LinkedInEventsTable';
 
+import AnalysisEditor from './AnalysisEditor';
 import PrintButton from '@/components/dashboard/PrintButton';
 import styles from './page.module.css';
 
@@ -47,6 +48,7 @@ export default async function DashboardPage({ searchParams }) {
     .select('id, client, logo_url, actif, target_cpa_google, max_cpa_google, target_ctr_google, min_ctr_google, target_cpa_meta, max_cpa_meta, target_ctr_meta, min_ctr_meta, has_google_ads, has_meta, has_ga4, has_gsc, has_linkedin')
     .eq('actif', true)
     .order('client');
+
 
   if (!clients || clients.length === 0) {
     return (
@@ -153,7 +155,7 @@ export default async function DashboardPage({ searchParams }) {
       : supabaseAuth.from('ga4_overview').select('report_month').eq('client_id', currentClient.id).order('report_month', { ascending: false }).limit(24),
     hasGoogleAds ? supabaseAuth.from('google_ads_conversions_monthly').select('campaign_name, conversion_name, conversions').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('conversions', { ascending: false }) : Promise.resolve({ data: [] }),
     hasMeta ? supabaseAuth.from('meta_actions').select('action_type, action_value').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('action_value', { ascending: false }) : Promise.resolve({ data: [] }),
-    supabaseAuth.from('ai_analyses').select('summary').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
+    supabaseAuth.from('ai_analyses').select('summary, analyse_global_client, analyse_global_agence').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
     hasMeta ? supabaseAuth.from('meta_insights').select('breakdown_type, breakdown_value, impressions, percentage').eq('client_id', currentClient.id).eq('report_month', selectedMonth) : Promise.resolve({ data: [] }),
     hasLinkedIn ? supabaseAuth.from('linkedin_ads_overview').select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle() : Promise.resolve({ data: null }),
     hasLinkedIn ? supabaseAuth.from('linkedin_ads_campaigns').select('campaign_name, campaign_id, status, objective, impressions, clicks, conversions, cost_chf, conv_value_chf').eq('client_id', currentClient.id).eq('report_month', selectedMonth) : Promise.resolve({ data: [] }),
@@ -440,7 +442,13 @@ export default async function DashboardPage({ searchParams }) {
                   )}
                 </section>
 
-                <AnalysisBlock analysis={aiAnalysis} />
+                <AnalysisEditor
+                  clientText={aiAnalysis?.analyse_global_client}
+                  agenceText={role === 'agency' ? aiAnalysis?.analyse_global_agence : null}
+                  clientId={currentClient.id}
+                  reportMonth={selectedMonth}
+                  isAdmin={role === 'agency'}
+                />
               </>
             )}
           </>
@@ -521,17 +529,5 @@ export default async function DashboardPage({ searchParams }) {
         )}
       </main>
     </>
-  );
-}
-
-function AnalysisBlock({ analysis }) {
-  return (
-    <div className={styles.analysisCard}>
-      <h2 className={styles.analysisTitle}>Analyse globale</h2>
-      {analysis?.summary
-        ? <p className={styles.analysisSummary}>{analysis.summary}</p>
-        : <p className={styles.analysisEmpty}>Aucune analyse disponible pour ce mois.</p>
-      }
-    </div>
   );
 }
