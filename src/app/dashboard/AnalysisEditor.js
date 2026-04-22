@@ -81,7 +81,7 @@ export default function AnalysisEditor({ clientText, agenceText, clientId, repor
           </>
         ) : (
           savedText
-            ? <div className={styles.analysisSummary}><ReactMarkdown>{savedText}</ReactMarkdown></div>
+            ? <div className={styles.analysisAgenceBody}><div className={styles.analysisSummary}><ReactMarkdown>{savedText}</ReactMarkdown></div></div>
             : <p className={styles.analysisEmpty}>Aucune analyse disponible.</p>
         )}
       </div>
@@ -89,7 +89,9 @@ export default function AnalysisEditor({ clientText, agenceText, clientId, repor
       {agenceText && (
         <div className={`${styles.analysisCard} ${styles.analysisAgence}`}>
           <h2 className={styles.analysisTitle}>Recommandation interne pour l&apos;agence</h2>
-          <div className={styles.analysisSummary}><ReactMarkdown>{agenceText}</ReactMarkdown></div>
+          <div className={styles.analysisAgenceBody}>
+            <div className={styles.analysisSummary}><ReactMarkdown>{agenceText}</ReactMarkdown></div>
+          </div>
         </div>
       )}
     </>

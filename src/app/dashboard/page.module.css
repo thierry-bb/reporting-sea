@@ -264,6 +264,12 @@
 .analysisAgence {
   border-color: rgba(243, 27, 140, 0.3);
   background: var(--color-accent-muted);
+  height: auto;
+}
+
+.analysisAgenceBody {
+  max-height: 480px;
+  overflow-y: auto;
 }
 
 .analysisTitleRow {

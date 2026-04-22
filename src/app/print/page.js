@@ -19,6 +19,7 @@ import MetaActionsTable from '@/app/dashboard/MetaActionsTable';
 import TopPagesTable from '@/app/dashboard/TopPagesTable';
 import GscQueriesTable from '@/app/dashboard/GscQueriesTable';
 import LinkedInCampaignsTable from '@/app/dashboard/LinkedInCampaignsTable';
+import ReactMarkdown from 'react-markdown';
 import AutoPrint from './AutoPrint';
 import styles from './page.module.css';
 
@@ -92,7 +93,7 @@ export default async function PrintPage({ searchParams }) {
     supabaseAuth.from('global_monthly_reporting').select('report_month, google_spend, meta_spend, total_ads_spend').eq('client_id', currentClient.id).gte('report_month', sixMonthsAgo).lte('report_month', selectedMonth).order('report_month'),
     hasGoogleAds ? supabaseAuth.from('google_ads_conversions_monthly').select('campaign_name, conversion_name, conversions').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('conversions', { ascending: false }) : Promise.resolve({ data: [] }),
     hasMeta ? supabaseAuth.from('meta_actions').select('action_type, action_value').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('action_value', { ascending: false }) : Promise.resolve({ data: [] }),
-    supabaseAuth.from('ai_analyses').select('summary').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
+    supabaseAuth.from('ai_analyses').select('analyse_global_client').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
     hasMeta ? supabaseAuth.from('meta_insights').select('breakdown_type, breakdown_value, impressions, percentage').eq('client_id', currentClient.id).eq('report_month', selectedMonth) : Promise.resolve({ data: [] }),
     hasLinkedIn ? supabaseAuth.from('linkedin_ads_overview').select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle() : Promise.resolve({ data: null }),
     hasLinkedIn ? supabaseAuth.from('linkedin_ads_campaigns').select('campaign_name, campaign_id, status, objective, impressions, clicks, conversions, cost_chf, conv_value_chf').eq('client_id', currentClient.id).eq('report_month', selectedMonth) : Promise.resolve({ data: [] }),
@@ -335,11 +336,11 @@ export default async function PrintPage({ searchParams }) {
 }
 
 function PrintAnalysisBlock({ analysis }) {
-  if (!analysis?.summary) return null;
+  if (!analysis?.analyse_global_client) return null;
   return (
     <div className={styles.analysisCard}>
       <h3 className={styles.analysisHeadline}>Analyse globale</h3>
-      <p className={styles.analysisSummary}>{analysis.summary}</p>
+      <div className={styles.analysisSummary}><ReactMarkdown>{analysis.analyse_global_client}</ReactMarkdown></div>
     </div>
   );
 }
