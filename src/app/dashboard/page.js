@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import supabase from '@/lib/supabase';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
+import { createClient } from '@supabase/supabase-js';
 import {
   formatCurrency, formatPercent, formatNumber, formatMonth,
   normalizeMonth, getMonthOffset, getPreviousMonth,
@@ -36,6 +37,10 @@ export default async function DashboardPage({ searchParams }) {
 
   // --- Auth ---
   const supabaseAuth = await createSupabaseServerClient();
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
   const { data: { user } } = await supabaseAuth.auth.getUser();
   if (!user) redirect('/login');
 
@@ -155,7 +160,7 @@ export default async function DashboardPage({ searchParams }) {
       : supabaseAuth.from('ga4_overview').select('report_month').eq('client_id', currentClient.id).order('report_month', { ascending: false }).limit(24),
     hasGoogleAds ? supabaseAuth.from('google_ads_conversions_monthly').select('campaign_name, conversion_name, conversions').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('conversions', { ascending: false }) : Promise.resolve({ data: [] }),
     hasMeta ? supabaseAuth.from('meta_actions').select('action_type, action_value').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('action_value', { ascending: false }) : Promise.resolve({ data: [] }),
-    supabaseAuth.from('ai_analyses').select('summary, analyse_global_client, analyse_global_agence').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
+    supabaseAdmin.from('ai_analyses').select('summary, analyse_global_client, analyse_global_agence').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle(),
     hasMeta ? supabaseAuth.from('meta_insights').select('breakdown_type, breakdown_value, impressions, percentage').eq('client_id', currentClient.id).eq('report_month', selectedMonth) : Promise.resolve({ data: [] }),
     hasLinkedIn ? supabaseAuth.from('linkedin_ads_overview').select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle() : Promise.resolve({ data: null }),
     hasLinkedIn ? supabaseAuth.from('linkedin_ads_campaigns').select('campaign_name, campaign_id, status, objective, impressions, clicks, conversions, cost_chf, conv_value_chf').eq('client_id', currentClient.id).eq('report_month', selectedMonth) : Promise.resolve({ data: [] }),
@@ -443,6 +448,7 @@ export default async function DashboardPage({ searchParams }) {
                 </section>
 
                 <AnalysisEditor
+                  key={`${currentClient.id}-${selectedMonth}`}
                   clientText={aiAnalysis?.analyse_global_client}
                   agenceText={role === 'agency' ? aiAnalysis?.analyse_global_agence : null}
                   clientId={currentClient.id}
