@@ -11,19 +11,40 @@ export default function SetPasswordPage() {
   const [sessionReady, setSessionReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [linkError, setLinkError] = useState('');
   const router = useRouter();
 
   useEffect(() => {
+    // Check for errors in the URL hash (e.g. expired link)
+    const hash = window.location.hash;
+    if (hash.includes('error=')) {
+      const params = new URLSearchParams(hash.slice(1));
+      const desc = params.get('error_description');
+      setLinkError(desc ? desc.replace(/\+/g, ' ') : 'Lien invalide ou expiré.');
+      return;
+    }
+
     const supabase = createSupabaseBrowserClient();
 
-    // Check if session already established (e.g. after token exchange)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setSessionReady(true);
-    });
+    // If the hash contains an access_token from an invite/recovery link,
+    // the Supabase client may have already processed it before this effect runs.
+    // In that case getSession() returns the freshly-created session — safe to use.
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const hashType = hashParams.get('type');
+    if (hashParams.get('access_token') && (hashType === 'invite' || hashType === 'recovery')) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setSessionReady(true);
+        return;
+      }
+    }
 
-    // Also listen for the SIGNED_IN event triggered when hash tokens are processed
+    // Fallback: listen for the SIGNED_IN / PASSWORD_RECOVERY event in case
+    // the token hasn't been processed yet when this effect runs.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) setSessionReady(true);
+      if ((event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') && session) {
+        setSessionReady(true);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -48,6 +69,22 @@ export default function SetPasswordPage() {
       router.push('/dashboard');
       router.refresh();
     }
+  }
+
+  if (linkError) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.card}>
+          <div className={styles.logoWrap}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logos/agence-bb-logo.webp" alt="Agence BB" className={styles.logo} />
+          </div>
+          <h1 className={styles.title}>Lien expiré</h1>
+          <p className={styles.error}>{linkError}</p>
+          <p className={styles.subtitle}>Contactez l&apos;agence pour recevoir un nouveau lien d&apos;invitation.</p>
+        </div>
+      </div>
+    );
   }
 
   if (!sessionReady) {

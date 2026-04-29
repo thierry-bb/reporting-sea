@@ -44,7 +44,7 @@ export default async function DashboardPage({ searchParams }) {
   const { data: { user } } = await supabaseAuth.auth.getUser();
   if (!user) redirect('/login');
 
-  const role = user.user_metadata?.role || 'agency';
+  const role = user.user_metadata?.role || 'client';
   const userClientId = user.user_metadata?.client_id;
 
   // --- Charger les clients actifs ---

@@ -34,6 +34,9 @@ export default async function PrintPage({ searchParams }) {
   const { data: { user } } = await supabaseAuth.auth.getUser();
   if (!user) redirect('/login');
 
+  const role = user.user_metadata?.role || 'client';
+  const userClientId = user.user_metadata?.client_id;
+
   // Client
   const { data: clients } = await supabase
     .from('clients')
@@ -43,8 +46,15 @@ export default async function PrintPage({ searchParams }) {
 
   if (!clients || clients.length === 0) redirect('/dashboard');
 
-  const clientId = params.client || clients[0].id;
-  const currentClient = clients.find((c) => c.id === clientId) || clients[0];
+  // IDOR fix : un client ne peut accéder qu'à son propre PDF
+  const clientId = role === 'agency'
+    ? (params.client || clients[0].id)
+    : userClientId;
+
+  if (!clientId) redirect('/dashboard');
+
+  const currentClient = clients.find((c) => c.id === clientId);
+  if (!currentClient) redirect('/dashboard');
 
   const hasGoogleAds = currentClient.has_google_ads ?? true;
   const hasMeta      = currentClient.has_meta       ?? true;
