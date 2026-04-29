@@ -32,11 +32,9 @@ export default function SetPasswordPage() {
     const hashParams = new URLSearchParams(window.location.hash.slice(1));
     const hashType = hashParams.get('type');
     if (hashParams.get('access_token') && (hashType === 'invite' || hashType === 'recovery')) {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setSessionReady(true);
-        return;
-      }
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) setSessionReady(true);
+      });
     }
 
     // Fallback: listen for the SIGNED_IN / PASSWORD_RECOVERY event in case
