@@ -26,21 +26,21 @@ export default function SetPasswordPage() {
 
     const supabase = createSupabaseBrowserClient();
 
-    // If the hash contains an access_token from an invite/recovery link,
-    // the Supabase client may have already processed it before this effect runs.
-    // In that case getSession() returns the freshly-created session — safe to use.
     const hashParams = new URLSearchParams(window.location.hash.slice(1));
     const hashType = hashParams.get('type');
-    if (hashParams.get('access_token') && (hashType === 'invite' || hashType === 'recovery')) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) setSessionReady(true);
-      });
-    }
+    const hasInviteToken = !!hashParams.get('access_token') &&
+      (hashType === 'invite' || hashType === 'recovery');
 
-    // Fallback: listen for the SIGNED_IN / PASSWORD_RECOVERY event in case
-    // the token hasn't been processed yet when this effect runs.
+    // onAuthStateChange fires INITIAL_SESSION immediately on registration with the
+    // current session state. If SIGNED_IN already fired before this effect ran
+    // (race condition), INITIAL_SESSION will carry the session — accept it when
+    // we know a valid invite/recovery token was in the URL.
+    // For SIGNED_IN / PASSWORD_RECOVERY we accept regardless (token just processed).
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if ((event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') && session) {
+      if (!session) return;
+      if (event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') {
+        setSessionReady(true);
+      } else if (event === 'INITIAL_SESSION' && hasInviteToken) {
         setSessionReady(true);
       }
     });
