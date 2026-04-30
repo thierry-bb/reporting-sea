@@ -15,37 +15,36 @@ export default function SetPasswordPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check for errors in the URL hash (e.g. expired link)
-    const hash = window.location.hash;
-    if (hash.includes('error=')) {
-      const params = new URLSearchParams(hash.slice(1));
-      const desc = params.get('error_description');
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+
+    // Handle error from Supabase (e.g. expired link)
+    if (hashParams.get('error')) {
+      const desc = hashParams.get('error_description');
       setLinkError(desc ? desc.replace(/\+/g, ' ') : 'Lien invalide ou expiré.');
       return;
     }
 
-    const supabase = createSupabaseBrowserClient();
-
-    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const accessToken = hashParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token');
     const hashType = hashParams.get('type');
-    const hasInviteToken = !!hashParams.get('access_token') &&
-      (hashType === 'invite' || hashType === 'recovery');
 
-    // onAuthStateChange fires INITIAL_SESSION immediately on registration with the
-    // current session state. If SIGNED_IN already fired before this effect ran
-    // (race condition), INITIAL_SESSION will carry the session — accept it when
-    // we know a valid invite/recovery token was in the URL.
-    // For SIGNED_IN / PASSWORD_RECOVERY we accept regardless (token just processed).
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!session) return;
-      if (event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') {
-        setSessionReady(true);
-      } else if (event === 'INITIAL_SESSION' && hasInviteToken) {
-        setSessionReady(true);
-      }
-    });
+    if (!accessToken || !(hashType === 'invite' || hashType === 'recovery')) {
+      setLinkError('Lien d\'invitation manquant ou invalide.');
+      return;
+    }
 
-    return () => subscription.unsubscribe();
+    // Directly set the session from the tokens in the URL hash.
+    // This is more reliable than waiting for onAuthStateChange events,
+    // which may not fire when using @supabase/ssr's createBrowserClient.
+    const supabase = createSupabaseBrowserClient();
+    supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+      .then(({ data: { session }, error }) => {
+        if (error) {
+          setLinkError(error.message);
+        } else if (session) {
+          setSessionReady(true);
+        }
+      });
   }, []);
 
   async function handleSubmit(e) {
