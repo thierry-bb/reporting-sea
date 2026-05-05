@@ -35,6 +35,17 @@ export default function Header({ clients = [], monthsList = [], pageTitle = 'Das
 
   return (
     <header className={styles.header}>
+      <button
+        className={styles.hamburger}
+        onClick={() => window.dispatchEvent(new Event('sidebar:toggle'))}
+        aria-label="Menu"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <line x1="3" y1="12" x2="21" y2="12" />
+          <line x1="3" y1="18" x2="21" y2="18" />
+        </svg>
+      </button>
       <div className={styles.left}>
         <h1 className={styles.pageTitle}>{pageTitle}</h1>
         <TabBar activeTab={activeTab} tabs={tabs} />

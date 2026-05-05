@@ -239,6 +239,28 @@
   border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
+/* Auto-collapse entre 769px et 1100px */
+@media (max-width: 1100px) and (min-width: 769px) {
+  .sidebar {
+    width: var(--sidebar-collapsed) !important;
+  }
+
+  .navLabel,
+  .collapseLabel,
+  .navSection {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .logoImg {
+    opacity: 0;
+  }
+
+  .collapseIcon {
+    transform: rotate(180deg);
+  }
+}
+
 /* Mobile overlay */
 .overlay {
   display: none;
@@ -249,6 +271,10 @@
   backdrop-filter: blur(4px);
 }
 
+.overlay.overlayVisible {
+  display: block;
+}
+
 @media (max-width: 768px) {
   .sidebar {
     transform: translateX(-100%);
@@ -257,9 +283,5 @@
 
   .sidebar.mobileOpen {
     transform: translateX(0);
-  }
-
-  .overlay {
-    display: block;
   }
 }

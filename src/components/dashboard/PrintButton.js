@@ -3,7 +3,7 @@
 import { useSearchParams } from 'next/navigation';
 import styles from './PrintButton.module.css';
 
-export default function PrintButton() {
+export default function PrintButton({ variant }) {
   const searchParams = useSearchParams();
   const client = searchParams.get('client') || '';
   const month = searchParams.get('month') || '';
@@ -15,7 +15,7 @@ export default function PrintButton() {
       href={printUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className={styles.btn}
+      className={variant === 'prominent' ? styles.btnProminent : styles.btn}
     >
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="6 9 6 2 18 2 18 9" />

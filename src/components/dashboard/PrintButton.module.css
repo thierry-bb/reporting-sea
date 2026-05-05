@@ -27,8 +27,38 @@
   flex-shrink: 0;
 }
 
+.btnProminent {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border-strong, rgba(255,255,255,0.2));
+  background: var(--color-surface-solid, #2B2C2D);
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.btnProminent:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-text-muted);
+}
+
+.btnProminent svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
 @media print {
-  .btn {
+  .btn,
+  .btnProminent {
     display: none;
   }
 }

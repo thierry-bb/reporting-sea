@@ -5,7 +5,8 @@ import ReactMarkdown from 'react-markdown';
 import { upsertAnalysisClient } from './analysisActions';
 import styles from './page.module.css';
 
-export default function AnalysisEditor({ clientText, agenceText, clientId, reportMonth, isAdmin }) {
+export default function AnalysisEditor({ clientText, agenceText, clientId, reportMonth, isAdmin, variant }) {
+  const isHighlight = variant === 'highlight';
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(clientText || '');
   const [savedText, setSavedText] = useState(clientText || '');
@@ -42,9 +43,12 @@ export default function AnalysisEditor({ clientText, agenceText, clientId, repor
 
   return (
     <>
-      <div className={styles.analysisCard}>
+      <div className={isHighlight ? styles.analysisCardHighlight : styles.analysisCard}>
         <div className={styles.analysisTitleRow}>
-          <h2 className={styles.analysisTitle}>Analyse globale</h2>
+          <div>
+            {isHighlight && <p className={styles.analysisHighlightLabel}>Point clés du mois</p>}
+            {!isHighlight && <h2 className={styles.analysisTitle}>Analyse globale</h2>}
+          </div>
           {isAdmin && !editing && (
             <button className={styles.analysisEditBtn} onClick={handleEdit}>
               Modifier

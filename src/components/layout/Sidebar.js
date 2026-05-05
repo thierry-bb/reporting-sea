@@ -47,10 +47,15 @@ const NAV_ITEMS = [
 export default function Sidebar({ role }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
     if (saved === 'true') setCollapsed(true);
+
+    const handleToggle = () => setMobileOpen((prev) => !prev);
+    window.addEventListener('sidebar:toggle', handleToggle);
+    return () => window.removeEventListener('sidebar:toggle', handleToggle);
   }, []);
 
   const toggleCollapse = () => {
@@ -60,7 +65,8 @@ export default function Sidebar({ role }) {
   };
 
   return (
-    <aside className={`${styles.sidebar} ${collapsed ? styles.collapsed : ''}`}>
+    <>
+    <aside className={`${styles.sidebar} ${collapsed ? styles.collapsed : ''} ${mobileOpen ? styles.mobileOpen : ''}`}>
       {/* Logo */}
       <div className={styles.logo}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -97,5 +103,10 @@ export default function Sidebar({ role }) {
         </button>
       </div>
     </aside>
+    <div
+      className={`${styles.overlay} ${mobileOpen ? styles.overlayVisible : ''}`}
+      onClick={() => setMobileOpen(false)}
+    />
+    </>
   );
 }

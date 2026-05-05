@@ -16,7 +16,7 @@ export default async function DashboardLayout({ children }) {
       <Sidebar role={role} />
       <div
         style={{
-          marginLeft: 'var(--sidebar-width)',
+          marginLeft: 'var(--sidebar-nav-width)',
           flex: 1,
           minWidth: 0,
           transition: 'margin-left var(--transition-base)',

@@ -26,6 +26,7 @@ import LinkedInCampaignsTable from './LinkedInCampaignsTable';
 import LinkedInEventsTable from './LinkedInEventsTable';
 
 import AnalysisEditor from './AnalysisEditor';
+import OverviewSparkline from './OverviewSparkline';
 import PrintButton from '@/components/dashboard/PrintButton';
 import styles from './page.module.css';
 
@@ -144,6 +145,8 @@ export default async function DashboardPage({ searchParams }) {
     { data: metaCampaignsPrev },
     { data: linkedInOverviewPrev },
     { data: linkedInEvents },
+    { data: global6m },
+    { data: li6m },
   ] = await Promise.all([
     !linkedInOnly ? supabaseAuth.from('global_monthly_reporting').select('*').eq('client_id', currentClient.id).eq('report_month', selectedMonth).maybeSingle() : Promise.resolve({ data: null }),
     !linkedInOnly ? supabaseAuth.from('global_monthly_reporting').select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle() : Promise.resolve({ data: null }),
@@ -168,6 +171,8 @@ export default async function DashboardPage({ searchParams }) {
     hasMeta ? supabaseAuth.from('meta_campaigns').select('impressions, reach, clicks, page_likes, spend, platform, purchase_count, purchase_value').eq('client_id', currentClient.id).eq('report_month', previousMonth) : Promise.resolve({ data: [] }),
     hasLinkedIn ? supabaseAuth.from('linkedin_ads_overview').select('*').eq('client_id', currentClient.id).eq('report_month', previousMonth).maybeSingle() : Promise.resolve({ data: null }),
     hasLinkedIn ? supabaseAuth.from('linkedin_ads_events').select('conversion_name, conversions').eq('client_id', currentClient.id).eq('report_month', selectedMonth).order('conversions', { ascending: false }) : Promise.resolve({ data: [] }),
+    !linkedInOnly ? supabaseAuth.from('global_monthly_reporting').select('report_month, total_ads_spend, google_spend, meta_spend').eq('client_id', currentClient.id).order('report_month', { ascending: false }).limit(6) : Promise.resolve({ data: [] }),
+    hasLinkedIn ? supabaseAuth.from('linkedin_ads_overview').select('report_month, total_cost_chf').eq('client_id', currentClient.id).order('report_month', { ascending: false }).limit(6) : Promise.resolve({ data: [] }),
   ]);
 
   // --- Calculs agrégés ---
@@ -247,6 +252,18 @@ export default async function DashboardPage({ searchParams }) {
   const metaRoasDelta2  = calcDelta(metaRoasCur,    metaRoasPrev);
   const liRoasDelta2    = calcDelta(liRoasCur,      liRoasPrev);
 
+  // --- Données pour graphiques 6 mois ---
+  const sorted6m = [...(global6m || [])].reverse();
+  const trendData6m = sorted6m.map((r) => ({
+    month: formatMonth(r.report_month).split(' ')[0],
+    value: (r.total_ads_spend || 0) + (hasLinkedIn
+      ? ((li6m || []).find((l) => l.report_month === r.report_month)?.total_cost_chf || 0)
+      : 0),
+  }));
+  const googleSpend6m = sorted6m.map((r) => r.google_spend || 0);
+  const metaSpend6m   = sorted6m.map((r) => r.meta_spend   || 0);
+  const liSpend6m     = [...(li6m || [])].reverse().map((r) => r.total_cost_chf || 0);
+
   // Mois disponibles pour le sélecteur
   const availableMonths = (monthsList || []).map((r) => r.report_month);
 
@@ -266,17 +283,16 @@ export default async function DashboardPage({ searchParams }) {
       <main className={styles.page}>
         {/* Page header */}
         <div className={styles.pageHeader}>
-          <div className={styles.clientInfo}>
-            {currentClient.logo_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={currentClient.logo_url} alt={currentClient.client} className={styles.clientLogoFull} />
-            ) : (
-              <h2 className={styles.clientName}>{currentClient.client}</h2>
-            )}
+          <div>
+            <p className={styles.reportLabel}>Rapport mensuel · {currentClient.client}</p>
+            <h1 className={styles.reportTitle}>{formatMonth(selectedMonth)}</h1>
           </div>
           <div className={styles.pageHeaderRight}>
-            <div className={styles.periodBadge}>{formatMonth(selectedMonth)}</div>
-            <PrintButton />
+            <div className={styles.dataStatusBadge}>
+              <span className={styles.dataStatusDot} />
+              Données à jour
+            </div>
+            <PrintButton variant="prominent" />
           </div>
         </div>
 
@@ -337,115 +353,130 @@ export default async function DashboardPage({ searchParams }) {
             ) : (
               /* Autres clients : overview complet */
               <>
-                <section className={styles.kpiGrid}>
-                  <KpiCard
-                    label="Total Ads Spend"
-                    value={formatCurrency(hasLinkedIn ? totalSpend : globalCurrent?.total_ads_spend)}
-                    delta={hasLinkedIn ? totalSpendDelta : spendDelta}
-                    color="neutral"
-                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
-                  />
-                  <KpiCard
-                    label="Google Ads Spend"
-                    value={formatCurrency(globalCurrent?.google_spend)}
-                    delta={googleDelta}
-                    color="info"
-                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"/></svg>}
-                  />
-                  <KpiCard
-                    label="Meta Ads Spend"
-                    value={formatCurrency(globalCurrent?.meta_spend)}
-                    delta={metaDelta}
-                    color="accent"
-                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>}
-                  />
-                  {hasLinkedIn ? (
-                    <KpiCard
-                      label="LinkedIn Ads Spend"
-                      value={formatCurrency(linkedInOverview?.total_cost_chf)}
-                      delta={liCostDelta}
-                      color="linkedin"
-                      invertDelta
-                      icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>}
-                    />
-                  ) : (
-                    <KpiCard
-                      label="Sessions GA4"
-                      value={formatNumber(ga4Current?.sessions)}
-                      delta={sessionsDelta}
-                      color="positive"
-                      icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>}
-                    />
-                  )}
-                </section>
+                {/* Bloc Performance globale */}
+                <div className={styles.overviewGlobalBlock}>
+                  <div className={styles.overviewGlobalLeft}>
+                    <p className={styles.overviewBlockLabel}>Performance globale du mois</p>
+                    <div className={styles.overviewBigMetric}>
+                      {totalRoasCur != null ? `×${totalRoasCur.toFixed(2)}` : '—'}
+                      <span className={styles.overviewBigMetricUnit}>ROAS consolidé</span>
+                    </div>
+                    <div className={styles.overviewBadges}>
+                      {totalRoasDelta && (
+                        <span className={`${styles.overviewBadge} ${totalRoasDelta.direction === 'up' ? styles.badgeUp : styles.badgeDown}`}>
+                          {totalRoasDelta.direction === 'up' ? '↑' : '↓'} {Math.abs(totalRoasDelta.percent).toFixed(0)}% vs mois précédent
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className={styles.overviewGlobalRight}>
+                    <div className={styles.overviewGlobalKpis}>
+                      <div className={styles.overviewGlobalKpiItem}>
+                        <span className={styles.overviewGlobalKpiValue}>{formatCurrency(totalSpend)}</span>
+                        <span className={styles.overviewGlobalKpiLabel}>investis</span>
+                      </div>
+                      {totalConvCur > 0 && (
+                        <div className={styles.overviewGlobalKpiItem}>
+                          <span className={styles.overviewGlobalKpiValue}>{formatNumber(totalConvCur)}</span>
+                          <span className={styles.overviewGlobalKpiLabel}>conversions générées</span>
+                        </div>
+                      )}
+                      {totalRevCur > 0 && (
+                        <div className={styles.overviewGlobalKpiItem}>
+                          <span className={styles.overviewGlobalKpiValue}>{formatCurrency(totalRevCur)}</span>
+                          <span className={styles.overviewGlobalKpiLabel}>revenu estimé</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
-                {/* Ligne Conversions */}
-                <section className={styles.kpiGrid}>
-                  <KpiCard
-                    label="Total Conversions"
-                    value={formatNumber(totalConvCur)}
-                    delta={totalConvDelta}
-                    color="neutral"
-                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="20 6 9 17 4 12"/></svg>}
-                  />
-                  <KpiCard
-                    label="Conversions Google"
-                    value={formatNumber(googleConvCur)}
-                    delta={googleConvDelta2}
-                    color="info"
-                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"/></svg>}
-                  />
-                  <KpiCard
-                    label="Conversions Meta"
-                    value={formatNumber(metaConvCur.purchases)}
-                    delta={metaConvDelta}
-                    color="accent"
-                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>}
-                  />
-                  {hasLinkedIn && (
-                    <KpiCard
-                      label="Conversions LinkedIn"
-                      value={formatNumber(liConvCur)}
-                      delta={liConvDelta2}
-                      color="linkedin"
-                      icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>}
-                    />
-                  )}
-                </section>
+                {/* Blocs plateforme */}
+                <div className={styles.overviewPlatformsGrid}>
+                  {hasGoogleAds && (() => {
+                    return (
+                      <div className={styles.overviewPlatformCard}>
+                        <div className={styles.overviewPlatformHeader}>
+                          <span className={styles.platformDot} style={{ background: '#3B83DD' }} />
+                          <span className={styles.platformName}>Google Ads</span>
+                        </div>
+                        <div className={styles.platformSpend}>{formatCurrency(globalCurrent?.google_spend)}</div>
+                        {googleDelta && (
+                          <div className={styles.platformSpendDelta}>
+                            {googleDelta.direction === 'up' ? '↑' : '↓'} {Math.abs(googleDelta.percent).toFixed(1)}% vs mois précédent
+                          </div>
+                        )}
+                        <OverviewSparkline data={googleSpend6m} color="#3B83DD" />
+                        <div className={styles.platformStats}>
+                          <div className={styles.platformStatItem}>
+                            <span className={styles.platformStatLabel}>Conv.</span>
+                            <span className={styles.platformStatValue}>{formatNumber(googleConvCur)}</span>
+                          </div>
+                          <div className={styles.platformStatItem}>
+                            <span className={styles.platformStatLabel}>ROAS</span>
+                            <span className={styles.platformStatValue}>{googleRoasCur != null ? `×${googleRoasCur.toFixed(2)}` : '—'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
-                {/* Ligne ROAS */}
-                <section className={styles.kpiGrid}>
-                  <KpiCard
-                    label="ROAS Total"
-                    value={totalRoasCur != null ? `×${totalRoasCur.toFixed(2)}` : '—'}
-                    delta={totalRoasDelta}
-                    color="neutral"
-                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
-                  />
-                  <KpiCard
-                    label="ROAS Google"
-                    value={googleRoasCur != null ? `×${googleRoasCur.toFixed(2)}` : '—'}
-                    delta={googleRoasDelta}
-                    color="info"
-                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"/></svg>}
-                  />
-                  <KpiCard
-                    label="ROAS Meta"
-                    value={metaRoasCur != null ? `×${metaRoasCur.toFixed(2)}` : '—'}
-                    delta={metaRoasDelta2}
-                    color="accent"
-                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>}
-                  />
-                  {hasLinkedIn && (
-                    <KpiCard
-                      label="ROAS LinkedIn"
-                      value={liRoasCur != null ? `×${Number(liRoasCur).toFixed(2)}` : '—'}
-                      delta={liRoasDelta2}
-                      color="linkedin"
-                      icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>}
-                    />
-                  )}
-                </section>
+                  {hasMeta && (() => {
+                    return (
+                      <div className={styles.overviewPlatformCard}>
+                        <div className={styles.overviewPlatformHeader}>
+                          <span className={styles.platformDot} style={{ background: '#F31B8C' }} />
+                          <span className={styles.platformName}>Meta Ads</span>
+                        </div>
+                        <div className={styles.platformSpend}>{formatCurrency(globalCurrent?.meta_spend)}</div>
+                        {metaDelta && (
+                          <div className={styles.platformSpendDelta}>
+                            {metaDelta.direction === 'up' ? '↑' : '↓'} {Math.abs(metaDelta.percent).toFixed(1)}% vs mois précédent
+                          </div>
+                        )}
+                        <OverviewSparkline data={metaSpend6m} color="#F31B8C" />
+                        <div className={styles.platformStats}>
+                          <div className={styles.platformStatItem}>
+                            <span className={styles.platformStatLabel}>Conv.</span>
+                            <span className={styles.platformStatValue}>{formatNumber(metaConvCur.purchases)}</span>
+                          </div>
+                          <div className={styles.platformStatItem}>
+                            <span className={styles.platformStatLabel}>ROAS</span>
+                            <span className={styles.platformStatValue}>{metaRoasCur != null ? `×${metaRoasCur.toFixed(2)}` : '—'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {hasLinkedIn && (() => {
+                    return (
+                      <div className={styles.overviewPlatformCard}>
+                        <div className={styles.overviewPlatformHeader}>
+                          <span className={styles.platformDot} style={{ background: '#22c55e' }} />
+                          <span className={styles.platformName}>LinkedIn Ads</span>
+                        </div>
+                        <div className={styles.platformSpend}>{formatCurrency(linkedInOverview?.total_cost_chf)}</div>
+                        {liCostDelta && (
+                          <div className={styles.platformSpendDelta}>
+                            {liCostDelta.direction === 'up' ? '↑' : '↓'} {Math.abs(liCostDelta.percent).toFixed(1)}% vs mois précédent
+                          </div>
+                        )}
+                        <OverviewSparkline data={liSpend6m} color="#22c55e" />
+                        <div className={styles.platformStats}>
+                          <div className={styles.platformStatItem}>
+                            <span className={styles.platformStatLabel}>Conv.</span>
+                            <span className={styles.platformStatValue}>{formatNumber(liConvCur)}</span>
+                          </div>
+                          <div className={styles.platformStatItem}>
+                            <span className={styles.platformStatLabel}>ROAS</span>
+                            <span className={styles.platformStatValue}>{liRoasCur != null ? `×${Number(liRoasCur).toFixed(2)}` : '—'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
 
                 <AnalysisEditor
                   key={`${currentClient.id}-${selectedMonth}`}
@@ -454,6 +485,7 @@ export default async function DashboardPage({ searchParams }) {
                   clientId={currentClient.id}
                   reportMonth={selectedMonth}
                   isAdmin={role === 'agency'}
+                  variant="highlight"
                 />
               </>
             )}
