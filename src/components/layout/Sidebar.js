@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { DEFAULT_TABS } from '@/components/dashboard/TabBar';
 import styles from './Sidebar.module.css';
 
 const NAV_ITEMS = [
@@ -46,8 +47,19 @@ const NAV_ITEMS = [
 
 export default function Sidebar({ role }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'overview';
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  function handleMobileTab(tabId) {
+    window.dispatchEvent(new Event('nav:start'));
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', tabId);
+    router.push(`${pathname}?${params.toString()}`);
+    setMobileOpen(false);
+  }
 
   useEffect(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
@@ -71,6 +83,19 @@ export default function Sidebar({ role }) {
       <div className={styles.logo}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logos/agence-bb-logo.webp" alt="Agence BB" className={styles.logoImg} />
+      </div>
+
+      {/* Onglets — mobile uniquement */}
+      <div className={styles.mobileTabs}>
+        {DEFAULT_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            className={`${styles.mobileTab} ${activeTab === tab.id ? styles.mobileTabActive : ''}`}
+            onClick={() => handleMobileTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* Navigation */}

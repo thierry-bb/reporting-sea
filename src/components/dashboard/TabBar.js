@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import styles from './TabBar.module.css';
 
-const DEFAULT_TABS = [
+export const DEFAULT_TABS = [
   { id: 'overview', label: 'Overview',        color: null },
   { id: 'google',   label: 'Google Ads',      color: 'blue' },
   { id: 'meta',     label: 'Meta Ads',        color: 'pink' },
