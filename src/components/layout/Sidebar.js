@@ -52,6 +52,7 @@ export default function Sidebar({ role }) {
   const activeTab = searchParams.get('tab') || 'overview';
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileTabs, setMobileTabs] = useState(DEFAULT_TABS);
 
   useEffect(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
@@ -59,7 +60,14 @@ export default function Sidebar({ role }) {
 
     const handleToggle = () => setMobileOpen((prev) => !prev);
     window.addEventListener('sidebar:toggle', handleToggle);
-    return () => window.removeEventListener('sidebar:toggle', handleToggle);
+
+    const handleTabsUpdate = (e) => setMobileTabs(e.detail);
+    window.addEventListener('tabs:update', handleTabsUpdate);
+
+    return () => {
+      window.removeEventListener('sidebar:toggle', handleToggle);
+      window.removeEventListener('tabs:update', handleTabsUpdate);
+    };
   }, []);
 
   const toggleCollapse = () => {
@@ -87,7 +95,7 @@ export default function Sidebar({ role }) {
 
       {/* Onglets — mobile uniquement */}
       <div className={styles.mobileTabs}>
-        {DEFAULT_TABS.map((tab) => (
+        {mobileTabs.map((tab) => (
           <button
             key={tab.id}
             className={`${styles.mobileTab} ${activeTab === tab.id ? styles.mobileTabActive : ''}`}

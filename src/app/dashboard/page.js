@@ -28,6 +28,7 @@ import LinkedInEventsTable from './LinkedInEventsTable';
 import AnalysisEditor from './AnalysisEditor';
 import OverviewSparkline from './OverviewSparkline';
 import PrintButton from '@/components/dashboard/PrintButton';
+import TabsSync from './TabsSync';
 import styles from './page.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -248,6 +249,7 @@ export default async function DashboardPage({ searchParams }) {
   const totalRoasPrev = totalSpendPrev > 0 ? totalRevPrev / totalSpendPrev : null;
 
   const totalRoasDelta  = calcDelta(totalRoasCur,   totalRoasPrev);
+  const totalRevDelta   = calcDelta(totalRevCur  || null, totalRevPrev  || null);
   const googleRoasDelta = calcDelta(googleRoasCur,  googleRoasPrev);
   const metaRoasDelta2  = calcDelta(metaRoasCur,    metaRoasPrev);
   const liRoasDelta2    = calcDelta(liRoasCur,      liRoasPrev);
@@ -279,6 +281,7 @@ export default async function DashboardPage({ searchParams }) {
           tabs={tabs}
         />
       </Suspense>
+      <TabsSync tabs={tabs} />
 
       <main className={styles.page}>
         {/* Page header */}
@@ -374,17 +377,32 @@ export default async function DashboardPage({ searchParams }) {
                       <div className={styles.overviewGlobalKpiItem}>
                         <span className={styles.overviewGlobalKpiValue}>{formatCurrency(totalSpend)}</span>
                         <span className={styles.overviewGlobalKpiLabel}>investis</span>
+                        {totalSpendDelta && (
+                          <span className={`${styles.overviewGlobalKpiDelta} ${totalSpendDelta.direction === 'up' ? styles.kpiDeltaUp : styles.kpiDeltaDown}`}>
+                            {totalSpendDelta.direction === 'up' ? '↑' : '↓'} {Math.abs(totalSpendDelta.percent).toFixed(0)}% vs m-1
+                          </span>
+                        )}
                       </div>
                       {totalConvCur > 0 && (
                         <div className={styles.overviewGlobalKpiItem}>
                           <span className={styles.overviewGlobalKpiValue}>{formatNumber(totalConvCur)}</span>
                           <span className={styles.overviewGlobalKpiLabel}>conversions générées</span>
+                          {totalConvDelta && (
+                            <span className={`${styles.overviewGlobalKpiDelta} ${totalConvDelta.direction === 'up' ? styles.kpiDeltaUp : styles.kpiDeltaDown}`}>
+                              {totalConvDelta.direction === 'up' ? '↑' : '↓'} {Math.abs(totalConvDelta.percent).toFixed(0)}% vs m-1
+                            </span>
+                          )}
                         </div>
                       )}
                       {totalRevCur > 0 && (
                         <div className={styles.overviewGlobalKpiItem}>
                           <span className={styles.overviewGlobalKpiValue}>{formatCurrency(totalRevCur)}</span>
                           <span className={styles.overviewGlobalKpiLabel}>revenu estimé</span>
+                          {totalRevDelta && (
+                            <span className={`${styles.overviewGlobalKpiDelta} ${totalRevDelta.direction === 'up' ? styles.kpiDeltaUp : styles.kpiDeltaDown}`}>
+                              {totalRevDelta.direction === 'up' ? '↑' : '↓'} {Math.abs(totalRevDelta.percent).toFixed(0)}% vs m-1
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>

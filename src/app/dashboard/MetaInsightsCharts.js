@@ -134,7 +134,7 @@ export default function MetaInsightsCharts({ rows }) {
   return (
     <div className={styles.container}>
       <p className={styles.sectionLabel}>Démographie des impressions</p>
-      <div className={styles.grid} style={{ gridTemplateColumns: `repeat(${types.length}, 1fr)` }}>
+      <div className={styles.grid}>
         {types.map((t) => (
           <InsightPie
             key={t}

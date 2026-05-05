@@ -246,3 +246,10 @@ img, svg {
     --sidebar-nav-width: 64px;
   }
 }
+
+/* Sidebar hors-écran sur mobile */
+@media (max-width: 768px) {
+  :root {
+    --sidebar-nav-width: 0px;
+  }
+}

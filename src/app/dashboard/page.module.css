@@ -415,7 +415,7 @@
 /* === BLOC PERFORMANCE GLOBALE === */
 .overviewGlobalBlock {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 2fr;
   gap: var(--space-6);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -497,32 +497,60 @@
 
 .overviewGlobalRight {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  align-items: center;
+  border-left: 1px solid var(--color-border);
+  padding-left: var(--space-6);
+  width: 100%;
+  min-width: 0;
 }
 
 .overviewGlobalKpis {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+  flex-direction: row;
+  width: 100%;
+  justify-content: space-between;
 }
 
 .overviewGlobalKpiItem {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+  flex: 1;
+  padding: 0 var(--space-5);
+}
+
+.overviewGlobalKpiItem + .overviewGlobalKpiItem {
+  border-left: 1px solid var(--color-border);
+}
+
+.overviewGlobalKpiItem:first-child {
+  padding-left: 0;
 }
 
 .overviewGlobalKpiValue {
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 700;
   color: var(--color-text);
   line-height: 1.1;
 }
 
 .overviewGlobalKpiLabel {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--color-text-muted);
+}
+
+.overviewGlobalKpiDelta {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.overviewGlobalKpiDelta.kpiDeltaUp {
+  color: var(--color-green);
+}
+
+.overviewGlobalKpiDelta.kpiDeltaDown {
+  color: var(--color-accent);
 }
 
 /* === BLOCS PLATEFORME === */
@@ -677,6 +705,13 @@
 @media (max-width: 1100px) {
   .overviewGlobalBlock {
     grid-template-columns: 1fr;
+  }
+
+  .overviewGlobalRight {
+    border-left: none;
+    border-top: 1px solid var(--color-border);
+    padding-left: 0;
+    padding-top: var(--space-4);
   }
 
   .overviewPlatformsGrid {
