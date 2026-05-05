@@ -8,9 +8,11 @@ export default async function DashboardLayout({ children }) {
   const { data: { user } } = await supabase.auth.getUser();
   const role = user?.user_metadata?.role || 'client';
 
-  const { data: clients } = role === 'agency'
-    ? await supabase.from('clients').select('id, client').eq('actif', true).order('client')
-    : { data: [] };
+  const { data: clients } = await supabase
+    .from('clients')
+    .select('id, client')
+    .eq('actif', true)
+    .order('client');
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>

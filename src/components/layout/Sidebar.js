@@ -86,7 +86,7 @@ export default function Sidebar({ role, clients = [] }) {
       </div>
 
       {/* Sélecteur client — mobile uniquement */}
-      {role === 'agency' && clients.length > 0 && (
+      {role !== 'client' && clients.length > 0 && (
         <div className={styles.mobileClientSelect}>
           <span className={styles.mobileClientLabel}>Client</span>
           <select
