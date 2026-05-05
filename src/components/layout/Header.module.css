@@ -134,8 +134,26 @@
   height: 18px;
 }
 
+.mobileClientBar {
+  display: none;
+}
+
+.mobileClientSelect {
+  width: 100%;
+  background: var(--color-surface-solid);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  outline: none;
+}
+
 @media (max-width: 768px) {
   .header {
+    flex-wrap: wrap;
     padding: 0 var(--space-4);
   }
 
@@ -149,5 +167,11 @@
 
   .hamburger {
     display: flex;
+  }
+
+  .mobileClientBar {
+    display: flex;
+    width: 100%;
+    padding: 0 0 var(--space-2) 0;
   }
 }

@@ -45,21 +45,13 @@ const NAV_ITEMS = [
   },
 ];
 
-export default function Sidebar({ role, clients = [] }) {
+export default function Sidebar({ role }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeTab = searchParams.get('tab') || 'overview';
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  function handleMobileTab(tabId) {
-    window.dispatchEvent(new Event('nav:start'));
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('tab', tabId);
-    router.push(`${pathname}?${params.toString()}`);
-    setMobileOpen(false);
-  }
 
   useEffect(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
@@ -76,6 +68,14 @@ export default function Sidebar({ role, clients = [] }) {
     localStorage.setItem('sidebar-collapsed', String(next));
   };
 
+  function handleMobileTab(tabId) {
+    window.dispatchEvent(new Event('nav:start'));
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', tabId);
+    router.push(`${pathname}?${params.toString()}`);
+    setMobileOpen(false);
+  }
+
   return (
     <>
     <aside className={`${styles.sidebar} ${collapsed ? styles.collapsed : ''} ${mobileOpen ? styles.mobileOpen : ''}`}>
@@ -84,27 +84,6 @@ export default function Sidebar({ role, clients = [] }) {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logos/agence-bb-logo.webp" alt="Agence BB" className={styles.logoImg} />
       </div>
-
-      {/* Sélecteur client — mobile uniquement */}
-      {role !== 'client' && clients.length > 0 && (
-        <div className={styles.mobileClientSelect}>
-          <span className={styles.mobileClientLabel}>Client</span>
-          <select
-            value={searchParams.get('client') || ''}
-            onChange={(e) => {
-              const params = new URLSearchParams(searchParams.toString());
-              params.set('client', e.target.value);
-              router.push(`${pathname}?${params.toString()}`);
-              setMobileOpen(false);
-            }}
-            className={styles.mobileClientDropdown}
-          >
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>{c.client}</option>
-            ))}
-          </select>
-        </div>
-      )}
 
       {/* Onglets — mobile uniquement */}
       <div className={styles.mobileTabs}>

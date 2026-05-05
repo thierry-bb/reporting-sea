@@ -8,18 +8,14 @@ export default async function DashboardLayout({ children }) {
   const { data: { user } } = await supabase.auth.getUser();
   const role = user?.user_metadata?.role || 'client';
 
-  const { data: clients } = await supabase
-    .from('clients')
-    .select('id, client')
-    .eq('actif', true)
-    .order('client');
-
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       <Suspense fallback={null}>
         <NavigationProgress />
       </Suspense>
-      <Sidebar role={role} clients={clients || []} />
+      <Suspense fallback={null}>
+        <Sidebar role={role} />
+      </Suspense>
       <div
         style={{
           marginLeft: 'var(--sidebar-nav-width)',

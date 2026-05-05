@@ -117,6 +117,27 @@ export default function Header({ clients = [], monthsList = [], pageTitle = 'Das
         </div>
       </div>
 
+      {role !== 'client' && (
+        <div className={styles.mobileClientBar}>
+          <select
+            value={currentClient}
+            onChange={(e) => {
+              if (e.target.value === '__new__') {
+                window.open('https://tally.so/r/0QjPBA', '_blank');
+              } else {
+                updateParam('client', e.target.value);
+              }
+            }}
+            className={styles.mobileClientSelect}
+          >
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>{c.client}</option>
+            ))}
+            <option value="__new__">+ Ajout d&apos;un nouveau client</option>
+          </select>
+        </div>
+      )}
+
       <div className={styles.right}>
         <ThemeToggle />
         <div className={styles.badge}>
