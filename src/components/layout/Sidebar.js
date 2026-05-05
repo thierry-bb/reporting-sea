@@ -45,7 +45,7 @@ const NAV_ITEMS = [
   },
 ];
 
-export default function Sidebar({ role }) {
+export default function Sidebar({ role, clients = [] }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -84,6 +84,27 @@ export default function Sidebar({ role }) {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logos/agence-bb-logo.webp" alt="Agence BB" className={styles.logoImg} />
       </div>
+
+      {/* Sélecteur client — mobile uniquement */}
+      {role === 'agency' && clients.length > 0 && (
+        <div className={styles.mobileClientSelect}>
+          <span className={styles.mobileClientLabel}>Client</span>
+          <select
+            value={searchParams.get('client') || ''}
+            onChange={(e) => {
+              const params = new URLSearchParams(searchParams.toString());
+              params.set('client', e.target.value);
+              router.push(`${pathname}?${params.toString()}`);
+              setMobileOpen(false);
+            }}
+            className={styles.mobileClientDropdown}
+          >
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>{c.client}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Onglets — mobile uniquement */}
       <div className={styles.mobileTabs}>
