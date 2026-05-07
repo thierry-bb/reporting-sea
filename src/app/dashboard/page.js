@@ -428,11 +428,17 @@ export default async function DashboardPage({ searchParams }) {
                         <div className={styles.platformStats}>
                           <div className={styles.platformStatItem}>
                             <span className={styles.platformStatLabel}>Conv.</span>
-                            <span className={styles.platformStatValue}>{formatNumber(googleConvCur)}</span>
+                            <div className={styles.platformStatValueRow}>
+                              <span className={styles.platformStatValue}>{formatNumber(googleConvCur)}</span>
+                              {googleConvDelta2 && <span className={`${styles.platformStatDelta} ${googleConvDelta2.direction === 'up' ? styles.platformStatDeltaUp : styles.platformStatDeltaDown}`}>{googleConvDelta2.direction === 'up' ? '↑' : '↓'} {Math.abs(googleConvDelta2.percent).toFixed(0)}% vs m-1</span>}
+                            </div>
                           </div>
                           <div className={styles.platformStatItem}>
                             <span className={styles.platformStatLabel}>ROAS</span>
-                            <span className={styles.platformStatValue}>{googleRoasCur != null ? `×${googleRoasCur.toFixed(2)}` : '—'}</span>
+                            <div className={styles.platformStatValueRow}>
+                              <span className={styles.platformStatValue}>{googleRoasCur != null ? `×${googleRoasCur.toFixed(2)}` : '—'}</span>
+                              {googleRoasDelta && <span className={`${styles.platformStatDelta} ${googleRoasDelta.direction === 'up' ? styles.platformStatDeltaUp : styles.platformStatDeltaDown}`}>{googleRoasDelta.direction === 'up' ? '↑' : '↓'} {Math.abs(googleRoasDelta.percent).toFixed(0)}% vs m-1</span>}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -456,11 +462,17 @@ export default async function DashboardPage({ searchParams }) {
                         <div className={styles.platformStats}>
                           <div className={styles.platformStatItem}>
                             <span className={styles.platformStatLabel}>Conv.</span>
-                            <span className={styles.platformStatValue}>{formatNumber(metaConvCur.purchases)}</span>
+                            <div className={styles.platformStatValueRow}>
+                              <span className={styles.platformStatValue}>{formatNumber(metaConvCur.purchases)}</span>
+                              {metaConvDelta && <span className={`${styles.platformStatDelta} ${metaConvDelta.direction === 'up' ? styles.platformStatDeltaUp : styles.platformStatDeltaDown}`}>{metaConvDelta.direction === 'up' ? '↑' : '↓'} {Math.abs(metaConvDelta.percent).toFixed(0)}% vs m-1</span>}
+                            </div>
                           </div>
                           <div className={styles.platformStatItem}>
                             <span className={styles.platformStatLabel}>ROAS</span>
-                            <span className={styles.platformStatValue}>{metaRoasCur != null ? `×${metaRoasCur.toFixed(2)}` : '—'}</span>
+                            <div className={styles.platformStatValueRow}>
+                              <span className={styles.platformStatValue}>{metaRoasCur != null ? `×${metaRoasCur.toFixed(2)}` : '—'}</span>
+                              {metaRoasDelta2 && <span className={`${styles.platformStatDelta} ${metaRoasDelta2.direction === 'up' ? styles.platformStatDeltaUp : styles.platformStatDeltaDown}`}>{metaRoasDelta2.direction === 'up' ? '↑' : '↓'} {Math.abs(metaRoasDelta2.percent).toFixed(0)}% vs m-1</span>}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -484,11 +496,17 @@ export default async function DashboardPage({ searchParams }) {
                         <div className={styles.platformStats}>
                           <div className={styles.platformStatItem}>
                             <span className={styles.platformStatLabel}>Conv.</span>
-                            <span className={styles.platformStatValue}>{formatNumber(liConvCur)}</span>
+                            <div className={styles.platformStatValueRow}>
+                              <span className={styles.platformStatValue}>{formatNumber(liConvCur)}</span>
+                              {liConvDelta2 && <span className={`${styles.platformStatDelta} ${liConvDelta2.direction === 'up' ? styles.platformStatDeltaUp : styles.platformStatDeltaDown}`}>{liConvDelta2.direction === 'up' ? '↑' : '↓'} {Math.abs(liConvDelta2.percent).toFixed(0)}% vs m-1</span>}
+                            </div>
                           </div>
                           <div className={styles.platformStatItem}>
                             <span className={styles.platformStatLabel}>ROAS</span>
-                            <span className={styles.platformStatValue}>{liRoasCur != null ? `×${Number(liRoasCur).toFixed(2)}` : '—'}</span>
+                            <div className={styles.platformStatValueRow}>
+                              <span className={styles.platformStatValue}>{liRoasCur != null ? `×${Number(liRoasCur).toFixed(2)}` : '—'}</span>
+                              {liRoasDelta2 && <span className={`${styles.platformStatDelta} ${liRoasDelta2.direction === 'up' ? styles.platformStatDeltaUp : styles.platformStatDeltaDown}`}>{liRoasDelta2.direction === 'up' ? '↑' : '↓'} {Math.abs(liRoasDelta2.percent).toFixed(0)}% vs m-1</span>}
+                            </div>
                           </div>
                         </div>
                       </div>
